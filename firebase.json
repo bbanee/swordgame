@@ -1,0 +1,31 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "sword-enhance-game",
+          "appId": "1:864077751623:android:eeb68b9fbf7be23cc09862",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "sword-enhance-game",
+          "configurations": {
+            "android": "1:864077751623:android:eeb68b9fbf7be23cc09862",
+            "ios": "1:864077751623:ios:46f03428da9fbe70c09862",
+            "macos": "1:864077751623:ios:46f03428da9fbe70c09862",
+            "web": "1:864077751623:web:2adbdf0b2556894ac09862",
+            "windows": "1:864077751623:web:4c0e68377687ed59c09862"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "functions": {
+    "source": "functions"
+  }
+}

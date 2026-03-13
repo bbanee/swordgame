@@ -1,0 +1,185 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+
+    function hasField(d, f) { return d.keys().hasAny([f]); }
+    function isNonNegNumberField(d, f) {
+      return !hasField(d, f) || (d[f] is number && d[f] >= 0);
+    }
+    function isNumberRangeField(d, f, min, max) {
+      return !hasField(d, f) || (d[f] is number && d[f] >= min && d[f] <= max);
+    }
+    function isNumberInField(d, f, v1, v2) {
+      return !hasField(d, f) || (d[f] is number && (d[f] == v1 || d[f] == v2));
+    }
+    function isStringField(d, f) {
+      return !hasField(d, f) || d[f] is string;
+    }
+    function isStringOrNullField(d, f) {
+      return !hasField(d, f) || d[f] == null || d[f] is string;
+    }
+    function isBoolField(d, f) {
+      return !hasField(d, f) || d[f] is bool;
+    }
+    function isDateOrNullField(d, f) {
+      return !hasField(d, f) || d[f] == null || d[f] is timestamp || d[f] is string;
+    }
+    function isListField(d, f) {
+      return !hasField(d, f) || d[f] is list;
+    }
+    function isMapField(d, f) {
+      return !hasField(d, f) || d[f] is map;
+    }
+
+    function validUserDoc() {
+      let d = request.resource.data;
+
+      return true
+      // 타입/범위 검증
+      && isStringField(d, 'visitorId')
+      && isStringField(d, 'playerId')
+      && isStringField(d, 'ownerId')
+      && isStringField(d, 'nickname')
+
+      && isNonNegNumberField(d, 'gold')
+      && isNonNegNumberField(d, 'diamond')
+      && isNonNegNumberField(d, 'enhanceStone')
+      && isNumberRangeField(d, 'maxInventory', 0, 20)
+
+      && isListField(d, 'inventory')
+      && (!hasField(d, 'inventory') || d.inventory.size() <= 20)
+      && (!hasField(d, 'inventory') || !hasField(d, 'maxInventory') || d.inventory.size() <= d.maxInventory)
+
+      && isStringOrNullField(d, 'equippedSwordUid')
+      && isStringOrNullField(d, 'equippedSwordId')
+      && isNumberRangeField(d, 'equippedSwordLevel', 0, 30)
+
+      && isNumberRangeField(d, 'battleCount', 0, 20)
+      && isNumberRangeField(d, 'battleRefillCount', 0, 5)
+      && isNonNegNumberField(d, 'battleWinStreak')
+      && isNonNegNumberField(d, 'maxWinStreak')
+      && isDateOrNullField(d, 'lastBattleReset')
+      && isListField(d, 'battleRecords')
+
+      && isMapField(d, 'bossCooldowns')
+
+      && isListField(d, 'codex')
+      && isListField(d, 'unlockedTitles')
+      && isStringOrNullField(d, 'equippedTitle')
+      && isStringOrNullField(d, 'titleId')
+
+      && isListField(d, 'unlockedAchievements')
+      && isListField(d, 'claimedAchievements')
+
+      && isNonNegNumberField(d, 'attendanceStreak')
+      && isDateOrNullField(d, 'lastAttendance')
+      && isListField(d, 'dailyQuests')
+      && (!hasField(d, 'dailyQuests') || d.dailyQuests.size() <= 6)
+      && isDateOrNullField(d, 'lastQuestReset')
+
+      && isNumberRangeField(d, 'seasonPassLevel', 1, 50)
+      && isNonNegNumberField(d, 'seasonPassExp')
+      && isNonNegNumberField(d, 'todaySeasonExp')
+      && isListField(d, 'claimedSeasonRewards')
+      && isBoolField(d, 'hasPremiumPass')
+      && isBoolField(d, 'hasRemovedAds')
+      && isListField(d, 'claimedPremiumRewards')
+
+      && isNonNegNumberField(d, 'normalToRarePity')
+      && isNonNegNumberField(d, 'rareToUniquePity')
+      && isNonNegNumberField(d, 'uniqueToLegendPity')
+
+      && isNonNegNumberField(d, 'totalEnhanceAttempts')
+      && isNonNegNumberField(d, 'totalEnhanceSuccess')
+      && isNonNegNumberField(d, 'totalEnhanceFail')
+      && isNonNegNumberField(d, 'totalDestroy')
+      && isNonNegNumberField(d, 'maxConsecutiveSuccess')
+      && isNonNegNumberField(d, 'totalGacha')
+      && isNonNegNumberField(d, 'totalSynthesis')
+      && isNonNegNumberField(d, 'totalSell')
+      && isNonNegNumberField(d, 'totalBattle')
+      && isNonNegNumberField(d, 'totalBattleWin')
+      && isNonNegNumberField(d, 'bossKills')
+      && isNonNegNumberField(d, 'totalGoldEarned')
+      && isNonNegNumberField(d, 'totalDiamondEarned')
+      && isNonNegNumberField(d, 'totalQuestsCompleted')
+      && isNonNegNumberField(d, 'totalRevengeWins')
+      && isNonNegNumberField(d, 'totalStoneUsed')
+
+      && isMapField(d, 'adDailyCounts')
+      && isDateOrNullField(d, 'adResetDate')
+      && isListField(d, 'friendIds')
+
+      && isDateOrNullField(d, '_serverTimeCheck')
+      && isDateOrNullField(d, 'lastUpdated')
+      && isDateOrNullField(d, 'lastSaved')
+      && isDateOrNullField(d, 'updatedAt');
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+
+      // 운영자 외에는 재화 변경 금지
+      allow create: if isOwner(userId) && validUserDoc()
+        && isNumberInField(request.resource.data, 'gold', 0, 5000)
+        && isNumberInField(request.resource.data, 'diamond', 0, 100)
+        && isNumberInField(request.resource.data, 'enhanceStone', 0, 10);
+      allow update: if isOwner(userId) && validUserDoc()
+        && request.resource.data.gold == resource.data.gold
+        && request.resource.data.diamond == resource.data.diamond
+        && request.resource.data.enhanceStone == resource.data.enhanceStone;
+    }
+
+    match /users_public/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId);
+    }
+
+    match /battle_notifications/{docId} {
+      allow read: if isSignedIn()
+        && (resource.data.toUserId == request.auth.uid || resource.data.fromUserId == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.fromUserId == request.auth.uid
+        && request.resource.data.toUserId is string
+        && request.resource.data.fromNickname is string
+        && request.resource.data.fromLevel is number
+        && request.resource.data.fromLevel >= 0
+        && request.resource.data.fromLevel <= 30
+        && request.resource.data.fromGrade is string
+        && request.resource.data.fromElement is string
+        && request.resource.data.toLevel is number
+        && request.resource.data.toLevel >= 0
+        && request.resource.data.toLevel <= 30
+        && request.resource.data.toGrade is string
+        && request.resource.data.toWon is bool
+        && request.resource.data.read is bool;
+      allow update: if isSignedIn()
+        && resource.data.toUserId == request.auth.uid
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['read']);
+      allow delete: if false;
+    }
+
+    match /purchase_logs/{doc} {
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+
+    match /snapshots/{doc} {
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+
+    match /users_appintos/{odId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

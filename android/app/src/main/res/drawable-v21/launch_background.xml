@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 검 강화 게임 스플래시 화면 (API 21+) -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 배경색: 게임 테마 다크 퍼플 -->
+    <item android:drawable="@color/splash_background" />
+
+    <!-- 스플래시 이미지 (중앙 배치) -->
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/splash_image" />
+    </item>
+</layer-list>
