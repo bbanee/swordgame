@@ -30,7 +30,9 @@ class BattleResultScreen extends StatelessWidget {
             tooltip: '로그 복사',
             onPressed: () {
               Clipboard.setData(ClipboardData(text: result.logs.join('\n')));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('배틀 로그를 복사했습니다')));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('배틀 로그를 복사했습니다')));
             },
             icon: const Icon(Icons.copy_all),
           ),
@@ -38,10 +40,7 @@ class BattleResultScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: _buildTopCard(),
-          ),
+          Padding(padding: const EdgeInsets.all(16), child: _buildTopCard()),
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(16),
@@ -51,7 +50,13 @@ class BattleResultScreen extends StatelessWidget {
                 itemBuilder: (context, i) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(result.logs[i], style: const TextStyle(color: Colors.white70, height: 1.2)),
+                    child: Text(
+                      result.logs[i],
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        height: 1.2,
+                      ),
+                    ),
                   );
                 },
               ),
@@ -66,7 +71,11 @@ class BattleResultScreen extends StatelessWidget {
   Widget _buildTopCard() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: AppDecorations.card(borderColor: (result.isWin ? Colors.green : Colors.red).withOpacity(0.5)),
+      decoration: AppDecorations.card(
+        borderColor: (result.isWin ? Colors.green : Colors.red).withOpacity(
+          0.5,
+        ),
+      ),
       child: Column(
         children: [
           Row(
@@ -74,14 +83,27 @@ class BattleResultScreen extends StatelessWidget {
               Expanded(child: _fighterCard(me, isLeft: true)),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Text('VS', style: TextStyle(color: Colors.white38, fontWeight: FontWeight.bold)),
+                child: Text(
+                  'VS',
+                  style: TextStyle(
+                    color: Colors.white38,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               Expanded(child: _fighterCard(opponent, isLeft: false)),
             ],
           ),
           const SizedBox(height: 12),
           if (result.isWin)
-            Text('전리품 +${formatGold(result.goldEarned)}', style: const TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold))
+            Text(
+              '전리품 +${formatGold(result.goldEarned)}',
+              style: const TextStyle(
+                color: Colors.amber,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            )
           else
             const Text('전리품 없음', style: TextStyle(color: Colors.white54)),
         ],
@@ -91,13 +113,24 @@ class BattleResultScreen extends StatelessWidget {
 
   Widget _fighterCard(BattleParticipant p, {required bool isLeft}) {
     return Column(
-      crossAxisAlignment: isLeft ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+      crossAxisAlignment: isLeft
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.end,
       children: [
-        Text('${p.grade.emoji} ${p.name}', style: TextStyle(color: p.grade.color, fontWeight: FontWeight.bold)),
+        Text(
+          '${p.grade.emoji} ${p.name}',
+          style: TextStyle(color: p.grade.color, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 2),
-        Text('${p.swordName}  +${p.swordLevel}  ${p.element.emoji}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        Text(
+          '${p.swordName}  +${p.swordLevel}  ${p.element.emoji}',
+          style: const TextStyle(color: Colors.white54, fontSize: 12),
+        ),
         const SizedBox(height: 6),
-        Text('HP ${formatNumber(isLeft ? result.myHpRemaining : result.oppHpRemaining)}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(
+          'HP ${formatNumber(isLeft ? result.myHpRemaining : result.oppHpRemaining)}',
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
       ],
     );
   }

@@ -1,0 +1,16 @@
+Create a clean HD 2D game VFX sprite sheet for sword aura overlays.
+Exactly 6 rows and 4 columns, 24 equal cells, no borders or grid lines.
+Solid flat #FF00FF magenta background only. No text, no labels, no UI.
+Each cell contains only a magical aura effect centered around an empty vertical sword-shaped space; do not draw any sword, weapon, character, hand, or object.
+Rows: subtle silver sparkles, blue cyan wind swirl, violet electric arcs, orange red flame ring, dark purple shadow smoke, golden divine aura.
+Four animation frames per row show a smooth idle loop: low energy, building, peak, settling.
+Clean hand-painted mobile RPG asset style, crisp readable VFX silhouettes, transparent-style glow shapes on magenta background.
+
+Element FX sheet:
+Create a clean HD 2D game VFX sprite sheet for elemental sword aura overlays.
+Exactly 5 rows and 4 columns, 20 equal cells, no borders or grid lines.
+Solid flat #FF00FF magenta background only. No text, no labels, no UI.
+Each cell contains only a compact magical elemental effect centered around an empty vertical sword-shaped space; do not draw any sword, weapon, character, hand, object, icon, or symbol.
+Rows in GameElement order: fire, water, nature, light, dark.
+Four animation frames per row show a smooth idle loop: low energy, building, peak, settling.
+The element FX should be subtler and smaller than the main rarity aura so it can overlay a sword without covering it.

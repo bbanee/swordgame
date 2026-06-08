@@ -555,6 +555,27 @@ List<AchievementData> getAllAchievements() {
     );
   }
 
+  final towerFloors = [20, 40, 60, 80, 100];
+  final towerGold = [150000, 450000, 1200000, 2800000, 7000000];
+  final towerStone = [25, 70, 160, 320, 700];
+  final towerDiamond = [12, 30, 65, 120, 250];
+  for (int i = 0; i < towerFloors.length; i++) {
+    final t = towerFloors[i];
+    list.add(
+      AchievementData(
+        id: 'ach_tower_floor_$i',
+        category: AchievementCategory.misc,
+        name: '무한의 탑 $t층 돌파',
+        description: '무한의 탑 최고 기록을 $t층 이상 달성하세요.',
+        statsKey: 'infiniteTowerBestFloor',
+        target: t,
+        rewardGold: towerGold[i],
+        rewardStone: towerStone[i],
+        rewardDiamond: towerDiamond[i],
+      ),
+    );
+  }
+
   // 총 100개 검증(혹시라도 변경되면 여기서 확인 가능)
   // assert(list.length == 100);
 

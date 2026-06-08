@@ -110,11 +110,14 @@ void main() {
         final status = inRange ? '✓' : '✗';
         if (inRange) passCount++;
 
-        final matchName = '${m.$1.displayName}+${m.$2} vs ${m.$3.displayName}+${m.$4}';
-        print('  $matchName'.padRight(35) +
+        final matchName =
+            '${m.$1.displayName}+${m.$2} vs ${m.$3.displayName}+${m.$4}';
+        print(
+          '  $matchName'.padRight(35) +
               '${winRate.toStringAsFixed(1)}%'.padLeft(8) +
               '  목표: ${m.$5.toInt()}~${m.$6.toInt()}%'.padRight(15) +
-              '  $status');
+              '  $status',
+        );
       }
 
       print('-' * 70);
@@ -157,12 +160,15 @@ void main() {
         final inRange = diff >= 5.0 && diff <= 10.0;
         final status = inRange ? '✓' : (diff > 0 ? '△' : '✗');
 
-        final matchName = '${t.$1.displayName}+${t.$2} vs ${t.$3.displayName}+${t.$4}';
-        print('  $matchName'.padRight(30) +
+        final matchName =
+            '${t.$1.displayName}+${t.$2} vs ${t.$3.displayName}+${t.$4}';
+        print(
+          '  $matchName'.padRight(30) +
               '동일: ${neutral.toStringAsFixed(1)}%'.padLeft(12) +
               '  유리: ${advantage.toStringAsFixed(1)}%'.padLeft(14) +
               '  차이: +${diff.toStringAsFixed(1)}%'.padLeft(12) +
-              '  $status');
+              '  $status',
+        );
       }
 
       print('-' * 70);

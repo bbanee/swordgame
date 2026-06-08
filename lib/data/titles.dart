@@ -277,6 +277,30 @@ final List<TitleData> allTitles = [
     bonus: 300,
     condition: 'enhance_45',
   ),
+  const TitleData(
+    id: 't_34',
+    name: '🗼 탑의 등반자',
+    description: '무한의 탑 20층을 돌파했다',
+    grade: TitleGrade.rare,
+    bonus: 60,
+    condition: 'tower_20',
+  ),
+  const TitleData(
+    id: 't_35',
+    name: '👑 탑의 군주',
+    description: '무한의 탑 50층을 돌파했다',
+    grade: TitleGrade.legend,
+    bonus: 150,
+    condition: 'tower_50',
+  ),
+  const TitleData(
+    id: 't_36',
+    name: '🌠 무한의 정복자',
+    description: '무한의 탑 100층을 정복했다',
+    grade: TitleGrade.hidden,
+    bonus: 400,
+    condition: 'tower_100',
+  ),
 ];
 
 // ID로 칭호 찾기

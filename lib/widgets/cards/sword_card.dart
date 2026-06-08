@@ -59,14 +59,11 @@ class SwordCard extends StatelessWidget {
                         size: 16,
                       ),
                     ),
-                  
+
                   // 검 이모지
-                  Text(
-                    grade.emoji,
-                    style: const TextStyle(fontSize: 36),
-                  ),
+                  Text(grade.emoji, style: const TextStyle(fontSize: 36)),
                   const SizedBox(height: 4),
-                  
+
                   // 검 이름
                   Text(
                     sword.data.name,
@@ -79,7 +76,7 @@ class SwordCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                   ),
-                  
+
                   // 강화 레벨
                   Text(
                     '+${sword.level}',
@@ -114,11 +111,7 @@ class LargeSwordCard extends StatelessWidget {
   final OwnedSword sword;
   final bool showGlow;
 
-  const LargeSwordCard({
-    super.key,
-    required this.sword,
-    this.showGlow = true,
-  });
+  const LargeSwordCard({super.key, required this.sword, this.showGlow = true});
 
   @override
   Widget build(BuildContext context) {
@@ -144,10 +137,7 @@ class LargeSwordCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // 검 이모지
-          Text(
-            grade.emoji,
-            style: const TextStyle(fontSize: 80),
-          ),
+          Text(grade.emoji, style: const TextStyle(fontSize: 80)),
           const SizedBox(height: 12),
 
           // 등급

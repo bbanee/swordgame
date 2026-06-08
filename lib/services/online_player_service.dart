@@ -5,13 +5,16 @@ import 'package:flutter/foundation.dart';
 import '../models/player_profile.dart';
 import '../data/npcs.dart';
 
-/// ?라???레?어 ?비??(Firebase ?동)
+/// 온라인 플레이어 서비스 (Firebase 연동)
 class OnlinePlayerService {
   final String myUserId;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _publicUsersCollection = 'users_public';
+  static const String _tossUsersCollection = 'users_appintos';
+  static const String _tossNotificationsCollection =
+      'battle_notifications_appintos';
 
-  // ? ?? 캐시 (30?TTL)
+  // 랭킹 캐시 (30초 TTL)
   List<PlayerProfile>? _rankingsCache;
   DateTime? _rankingsCacheTime;
   static const _rankingsCacheDuration = Duration(seconds: 30);
@@ -41,12 +44,18 @@ class OnlinePlayerService {
     return DateTime.now();
   }
 
-  /// ???로??????데?트
+  int _parseInt(dynamic value, [int fallback = 0]) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  /// 내 프로필 업데이트
   Future<void> upsertMe(PlayerProfile me) async {
     if (myUserId.isEmpty) return;
 
     final key =
-        '${me.nickname}|${me.swordId}|${me.swordLevel}|${me.swordBreakthroughLevel}|${me.titleId}';
+        '${me.nickname}|${me.swordId}|${me.swordLevel}|${me.swordBreakthroughLevel}|${me.titleId}|${me.totalBattle}|${me.totalBattleWin}|${me.codexCount}';
     if (!_shouldSyncProfile(key)) return;
 
     try {
@@ -56,6 +65,9 @@ class OnlinePlayerService {
         'equippedSwordLevel': me.swordLevel,
         'equippedSwordBreakthroughLevel': me.swordBreakthroughLevel,
         'titleId': me.titleId,
+        'totalBattle': me.totalBattle,
+        'totalBattleWin': me.totalBattleWin,
+        'codexCount': me.codexCount,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       await _firestore.collection(_publicUsersCollection).doc(myUserId).set({
@@ -64,21 +76,24 @@ class OnlinePlayerService {
         'equippedSwordLevel': me.swordLevel,
         'equippedSwordBreakthroughLevel': me.swordBreakthroughLevel,
         'titleId': me.titleId,
+        'totalBattle': me.totalBattle,
+        'totalBattleWin': me.totalBattleWin,
+        'codexCount': me.codexCount,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       _rankingsCache = null;
       _rankingsCacheTime = null;
-      debugPrint('???로???데?트: ${me.nickname}');
+      debugPrint('프로필 업데이트: ${me.nickname}');
     } catch (e) {
-      debugPrint('???로???데?트 ?패: $e');
+      debugPrint('프로필 업데이트 실패: $e');
     }
   }
 
   // ============================================================
-  // ?️ 배? ?림 ?스??
+  // 배틀 알림 시스템
   // ============================================================
 
-  /// 배? ?림 보내?(공격?????공격자)
+  /// 배틀 알림 보내기 (공격받은 유저에게 공격자 정보 전송)
   Future<bool> sendBattleNotification({
     required String toUserId,
     required String myNickname,
@@ -90,7 +105,7 @@ class OnlinePlayerService {
     required bool opponentWon,
   }) async {
     if (toUserId.isEmpty || myUserId.isEmpty) {
-      debugPrint('??배? ?림 ?송 ?패: ID가 비어?음');
+      debugPrint('배틀 알림 전송 실패: ID가 비어 있음');
       return false;
     }
 
@@ -109,24 +124,24 @@ class OnlinePlayerService {
         'read': false,
       });
       debugPrint(
-        '??배? ?림 ?송: $myNickname ??$toUserId (?? ${opponentWon ? "?리" : "?배"})',
+        '배틀 알림 전송: $myNickname → $toUserId (상대 ${opponentWon ? "승리" : "패배"})',
       );
       debugPrint('   문서 ID: ${docRef.id}');
       return true;
     } catch (e) {
-      debugPrint('??배? ?림 ?송 ?패: $e');
+      debugPrint('배틀 알림 전송 실패: $e');
       return false;
     }
   }
 
-  /// ?게 ??배? ?림 가?오?
+  /// 내게 온 배틀 알림 가져오기
   Future<List<Map<String, dynamic>>> fetchBattleNotifications() async {
     if (myUserId.isEmpty) {
-      debugPrint('??배? ?림 ?신 ?패: myUserId가 비어?음');
+      debugPrint('배틀 알림 수신 실패: myUserId가 비어 있음');
       return [];
     }
 
-    debugPrint('? 배? ?림 조회: toUserId=$myUserId');
+    debugPrint('배틀 알림 조회: toUserId=$myUserId');
 
     try {
       final snapshot = await _firestore
@@ -134,7 +149,7 @@ class OnlinePlayerService {
           .where('toUserId', isEqualTo: myUserId)
           .get();
 
-      debugPrint('? Firestore?서 ${snapshot.docs.length}?문서 발견');
+      debugPrint('Firestore에서 ${snapshot.docs.length}개 문서 발견');
 
       final notifications = <Map<String, dynamic>>[];
       final unreadDocs = <DocumentSnapshot>[];
@@ -143,7 +158,7 @@ class OnlinePlayerService {
         final data = doc.data();
 
         if (data['read'] == true) {
-          debugPrint('   - ${doc.id}: ?? ?음, ?킵');
+          debugPrint('   - ${doc.id}: 이미 읽음, 스킵');
           continue;
         }
 
@@ -159,7 +174,7 @@ class OnlinePlayerService {
         notifications.add({
           'id': doc.id,
           'fromUserId': data['fromUserId'] ?? '',
-          'fromNickname': data['fromNickname'] ?? '?????음',
+          'fromNickname': data['fromNickname'] ?? '알 수 없음',
           'fromLevel': data['fromLevel'] ?? 1,
           'fromGrade': data['fromGrade'] ?? 'normal',
           'fromElement': data['fromElement'] ?? 'fire',
@@ -173,7 +188,7 @@ class OnlinePlayerService {
         unreadDocs.add(doc);
       }
 
-      // ? 배치???번에 ?음 처리 (Firebase ?기 비용 ?감)
+      // 배치로 한 번에 읽음 처리 (Firebase 쓰기 비용 절감)
       if (unreadDocs.isNotEmpty) {
         try {
           final batch = _firestore.batch();
@@ -181,9 +196,9 @@ class OnlinePlayerService {
             batch.update(doc.reference, {'read': true});
           }
           await batch.commit();
-          debugPrint('   ??${unreadDocs.length}??림 배치 ?음 처리 ?료');
+          debugPrint('   ${unreadDocs.length}개 알림 배치 읽음 처리 완료');
         } catch (e) {
-          debugPrint('   ??배치 ?음 처리 ?패: $e');
+          debugPrint('   배치 읽음 처리 실패: $e');
         }
       }
 
@@ -192,62 +207,102 @@ class OnlinePlayerService {
             (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime),
       );
 
-      debugPrint('? 최종 ${notifications.length}??림 반환');
+      debugPrint('최종 ${notifications.length}개 알림 반환');
       return notifications;
     } catch (e) {
-      debugPrint('??배? ?림 가?오??패: $e');
+      debugPrint('배틀 알림 가져오기 실패: $e');
       return [];
     }
   }
 
   // ============================================================
-  // ? ?레?어 조회
+  // 플레이어 조회
   // ============================================================
 
-  /// ID??레?어 조회
-  Future<PlayerProfile?> fetchById(String userId) async {
+  /// ID로 플레이어 조회 (users_public → users_appintos → users 순서로 탐색)
+  Future<PlayerProfile?> fetchById(
+    String userId, {
+    String platform = 'google',
+  }) async {
     if (userId.trim().isEmpty) return null;
 
     try {
+      // Toss 유저 힌트가 있으면 users_appintos 우선
+      if (platform == 'toss') {
+        final tossDoc = await _firestore
+            .collection(_tossUsersCollection)
+            .doc(userId)
+            .get();
+        if (tossDoc.exists) {
+          return _profileFromToss(userId, tossDoc.data()!);
+        }
+      }
+
+      // users_public 조회
       final doc = await _firestore
           .collection(_publicUsersCollection)
           .doc(userId)
           .get();
-      if (!doc.exists) {
-        final legacyDoc = await _firestore
-            .collection('users')
-            .doc(userId)
-            .get();
-        if (!legacyDoc.exists) return null;
-        final legacy = legacyDoc.data()!;
+      if (doc.exists) {
+        final data = doc.data()!;
         return PlayerProfile(
           userId: userId,
-          nickname: legacy['nickname'] ?? '  ',
-          swordId: legacy['equippedSwordId'] ?? 'sword_001',
-          swordLevel: legacy['equippedSwordLevel'] ?? 1,
-          swordBreakthroughLevel: legacy['equippedSwordBreakthroughLevel'] ?? 0,
-          titleId: legacy['titleId'] ?? 't_01',
-          updatedAt: _parseUpdatedAt(legacy['updatedAt']),
+          nickname: data['nickname'] ?? '알 수 없음',
+          swordId: data['equippedSwordId'] ?? 'sword_001',
+          swordLevel: data['equippedSwordLevel'] ?? 1,
+          swordBreakthroughLevel: data['equippedSwordBreakthroughLevel'] ?? 0,
+          titleId: data['titleId'] ?? 't_01',
+          updatedAt: _parseUpdatedAt(data['updatedAt']),
+          totalBattle: data['totalBattle'] ?? 0,
+          totalBattleWin: data['totalBattleWin'] ?? 0,
+          codexCount: data['codexCount'] ?? 0,
         );
       }
 
-      final data = doc.data()!;
+      // users_appintos 폴백 (platform 힌트 없이도 Toss 유저 찾기)
+      final tossDoc = await _firestore
+          .collection(_tossUsersCollection)
+          .doc(userId)
+          .get();
+      if (tossDoc.exists) {
+        return _profileFromToss(userId, tossDoc.data()!);
+      }
+
+      // 레거시 users 폴백
+      final legacyDoc = await _firestore.collection('users').doc(userId).get();
+      if (!legacyDoc.exists) return null;
+      final legacy = legacyDoc.data()!;
       return PlayerProfile(
         userId: userId,
-        nickname: data['nickname'] ?? '?????음',
-        swordId: data['equippedSwordId'] ?? 'sword_001',
-        swordLevel: data['equippedSwordLevel'] ?? 1,
-        swordBreakthroughLevel: data['equippedSwordBreakthroughLevel'] ?? 0,
-        titleId: data['titleId'] ?? 't_01',
-        updatedAt: _parseUpdatedAt(data['updatedAt']),
+        nickname: legacy['nickname'] ?? '알 수 없음',
+        swordId: legacy['equippedSwordId'] ?? 'sword_001',
+        swordLevel: legacy['equippedSwordLevel'] ?? 1,
+        swordBreakthroughLevel: legacy['equippedSwordBreakthroughLevel'] ?? 0,
+        titleId: legacy['titleId'] ?? 't_01',
+        updatedAt: _parseUpdatedAt(legacy['updatedAt']),
       );
     } catch (e) {
-      debugPrint('???레?어 조회 ?패: $e');
+      debugPrint('플레이어 조회 실패: $e');
       return null;
     }
   }
 
-  /// ?네?으??레?어 조회
+  PlayerProfile _profileFromToss(String userId, Map<String, dynamic> d) {
+    return PlayerProfile(
+      userId: userId,
+      nickname: d['nickname'] ?? '알 수 없음',
+      swordId: d['equippedSwordId'] ?? 'sword_001',
+      swordLevel: d['equippedSwordLevel'] ?? 1,
+      titleId: d['titleId'] ?? 't_01',
+      updatedAt: _parseUpdatedAt(d['updatedAt']),
+      totalBattle: d['totalBattle'] ?? 0,
+      totalBattleWin: d['totalBattleWin'] ?? 0,
+      codexCount: d['codexCount'] ?? 0,
+      platform: 'toss',
+    );
+  }
+
+  /// 닉네임으로 플레이어 조회
   Future<PlayerProfile?> fetchByNickname(String nickname) async {
     if (nickname.trim().isEmpty) return null;
 
@@ -269,7 +324,7 @@ class OnlinePlayerService {
         final legacy = legacyDoc.data();
         return PlayerProfile(
           userId: legacyDoc.id,
-          nickname: legacy['nickname'] ?? '  ',
+          nickname: legacy['nickname'] ?? '알 수 없음',
           swordId: legacy['equippedSwordId'] ?? 'sword_001',
           swordLevel: legacy['equippedSwordLevel'] ?? 1,
           swordBreakthroughLevel: legacy['equippedSwordBreakthroughLevel'] ?? 0,
@@ -277,6 +332,7 @@ class OnlinePlayerService {
           updatedAt: _parseUpdatedAt(legacy['updatedAt']),
           totalBattle: legacy['totalBattle'] ?? 0,
           totalBattleWin: legacy['totalBattleWin'] ?? 0,
+          codexCount: legacy['codexCount'] ?? 0,
         );
       }
 
@@ -284,7 +340,7 @@ class OnlinePlayerService {
       final data = doc.data();
       return PlayerProfile(
         userId: doc.id,
-        nickname: data['nickname'] ?? '?????음',
+        nickname: data['nickname'] ?? '알 수 없음',
         swordId: data['equippedSwordId'] ?? 'sword_001',
         swordLevel: data['equippedSwordLevel'] ?? 1,
         swordBreakthroughLevel: data['equippedSwordBreakthroughLevel'] ?? 0,
@@ -292,84 +348,104 @@ class OnlinePlayerService {
         updatedAt: _parseUpdatedAt(data['updatedAt']),
         totalBattle: data['totalBattle'] ?? 0,
         totalBattleWin: data['totalBattleWin'] ?? 0,
+        codexCount: data['codexCount'] ?? 0,
       );
     } catch (e) {
-      debugPrint('???네??조회 ?패: $e');
+      debugPrint('닉네임 조회 실패: $e');
       return null;
     }
   }
 
   // ============================================================
-  // ? ??
+  // 랭킹
   // ============================================================
 
-  /// ?위 ?? 조회 (100?까지, ?투??기? ?렬) - ? 30?캐시
+  /// 상위 랭킹 조회 — users_public(구글) + users_appintos(토스) 합산 후 정렬
   Future<List<PlayerProfile>> fetchTopRankings({
     int limit = 100,
     bool forceRefresh = false,
   }) async {
-    // ?? ?? ??
     if (!forceRefresh &&
         _rankingsCache != null &&
         _rankingsCacheTime != null &&
         DateTime.now().difference(_rankingsCacheTime!) <
             _rankingsCacheDuration) {
-      debugPrint('?? ?? ?? ?? (${_rankingsCache!.length}?)');
+      debugPrint('랭킹 캐시 사용 (${_rankingsCache!.length}명)');
       return _rankingsCache!;
     }
 
     final profiles = <PlayerProfile>[];
-    final now = DateTime.now();
 
+    // ── Google(Flutter) 유저
     try {
-      final snapshot = await _firestore
+      final snap = await _firestore
           .collection(_publicUsersCollection)
           .orderBy('equippedSwordLevel', descending: true)
           .limit(limit)
           .get();
 
-      if (kDebugMode) {
-        debugPrint('? ?? 쿼리 문서 ?? ${snapshot.docs.length}');
-        for (final doc in snapshot.docs.take(5)) {
-          final data = doc.data();
-          final level = data['equippedSwordLevel'];
-          debugPrint('  - ${doc.id} level=$level (${level?.runtimeType})');
-        }
-      }
-
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        final updatedRaw = data['updatedAt'];
-        DateTime updatedAt;
-        if (updatedRaw is Timestamp) {
-          updatedAt = updatedRaw.toDate();
-        } else if (updatedRaw is String) {
-          updatedAt = DateTime.tryParse(updatedRaw) ?? now;
-        } else {
-          updatedAt = now;
-        }
+      for (final doc in snap.docs) {
+        final d = doc.data();
         profiles.add(
           PlayerProfile(
             userId: doc.id,
-            nickname: data['nickname'] ?? '? ? ??',
-            swordId: data['equippedSwordId'] ?? 'sword_001',
-            swordLevel: data['equippedSwordLevel'] ?? 1,
-            swordBreakthroughLevel: data['equippedSwordBreakthroughLevel'] ?? 0,
-            titleId: data['titleId'] ?? 't_01',
-            updatedAt: updatedAt,
-            totalBattle: data['totalBattle'] ?? 0,
-            totalBattleWin: data['totalBattleWin'] ?? 0,
+            nickname: d['nickname'] ?? '알 수 없음',
+            swordId: d['equippedSwordId'] ?? 'sword_001',
+            swordLevel: d['equippedSwordLevel'] ?? 1,
+            swordBreakthroughLevel: d['equippedSwordBreakthroughLevel'] ?? 0,
+            titleId: d['titleId'] ?? 't_01',
+            updatedAt: _parseUpdatedAt(d['updatedAt']),
+            totalBattle: d['totalBattle'] ?? 0,
+            totalBattleWin: d['totalBattleWin'] ?? 0,
+            codexCount: d['codexCount'] ?? 0,
+            platform: 'google',
           ),
         );
       }
-      debugPrint('?? ?? ????: ${profiles.length}?');
+      debugPrint('구글 랭킹: ${snap.docs.length}명');
     } catch (e) {
-      debugPrint('?? ?? ?? ??: $e');
+      debugPrint('구글 랭킹 로드 실패: $e');
     }
 
-    final result = profiles.take(100).toList();
+    // ── 토스(앱인토스) 유저
+    try {
+      final snap = await _firestore
+          .collection(_tossUsersCollection)
+          .orderBy('equippedSwordLevel', descending: true)
+          .limit(limit)
+          .get();
 
-    // ?? ?? ?? (?? ?????? ?? ???)
+      for (final doc in snap.docs) {
+        // 중복 userId 스킵
+        if (profiles.any((p) => p.userId == doc.id)) continue;
+        final d = doc.data();
+        profiles.add(
+          PlayerProfile(
+            userId: doc.id,
+            nickname: d['nickname'] ?? '알 수 없음',
+            swordId: d['equippedSwordId'] ?? 'sword_001',
+            swordLevel: d['equippedSwordLevel'] ?? 1,
+            titleId: d['titleId'] ?? 't_01',
+            updatedAt: _parseUpdatedAt(d['updatedAt']),
+            totalBattle: d['totalBattle'] ?? 0,
+            totalBattleWin: d['totalBattleWin'] ?? 0,
+            codexCount: d['codexCount'] ?? 0,
+            platform: 'toss',
+          ),
+        );
+      }
+      debugPrint('토스 랭킹: ${snap.docs.length}명');
+    } catch (e) {
+      // 권한 오류 등이어도 구글 랭킹은 유지
+      debugPrint('토스 랭킹 로드 실패: $e');
+    }
+
+    // 검 레벨 내림차순 → 상위 limit명
+    profiles.sort((a, b) => b.swordLevel.compareTo(a.swordLevel));
+    final result = profiles.take(limit).toList();
+
+    debugPrint('합산 랭킹: ${result.length}명 (구글+토스)');
+
     if (result.length > 1) {
       _rankingsCache = result;
       _rankingsCacheTime = DateTime.now();
@@ -378,7 +454,214 @@ class OnlinePlayerService {
     return result;
   }
 
-  /// ?? ?? ?? ?덤 ?? 찾기
+  Future<List<PlayerProfile>> fetchCodexRankings({int limit = 100}) async {
+    final profiles = <PlayerProfile>[];
+
+    try {
+      final snap = await _firestore
+          .collection(_publicUsersCollection)
+          .orderBy('codexCount', descending: true)
+          .limit(limit)
+          .get();
+
+      for (final doc in snap.docs) {
+        final d = doc.data();
+        profiles.add(
+          PlayerProfile(
+            userId: doc.id,
+            nickname: d['nickname'] ?? '알 수 없음',
+            swordId: d['equippedSwordId'] ?? 'sword_001',
+            swordLevel: d['equippedSwordLevel'] ?? 1,
+            swordBreakthroughLevel: d['equippedSwordBreakthroughLevel'] ?? 0,
+            titleId: d['titleId'] ?? 't_01',
+            updatedAt: _parseUpdatedAt(d['updatedAt']),
+            totalBattle: d['totalBattle'] ?? 0,
+            totalBattleWin: d['totalBattleWin'] ?? 0,
+            codexCount: d['codexCount'] ?? 0,
+            platform: 'google',
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('구글 도감 랭킹 로드 실패: $e');
+    }
+
+    try {
+      final snap = await _firestore
+          .collection(_tossUsersCollection)
+          .orderBy('codexCount', descending: true)
+          .limit(limit)
+          .get();
+
+      for (final doc in snap.docs) {
+        if (profiles.any((p) => p.userId == doc.id)) continue;
+        final d = doc.data();
+        profiles.add(
+          PlayerProfile(
+            userId: doc.id,
+            nickname: d['nickname'] ?? '알 수 없음',
+            swordId: d['equippedSwordId'] ?? 'sword_001',
+            swordLevel: d['equippedSwordLevel'] ?? 1,
+            swordBreakthroughLevel: d['equippedSwordBreakthroughLevel'] ?? 0,
+            titleId: d['titleId'] ?? 't_01',
+            updatedAt: _parseUpdatedAt(d['updatedAt']),
+            totalBattle: d['totalBattle'] ?? 0,
+            totalBattleWin: d['totalBattleWin'] ?? 0,
+            codexCount: d['codexCount'] ?? 0,
+            platform: 'toss',
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('토스 도감 랭킹 로드 실패: $e');
+    }
+
+    profiles.sort((a, b) {
+      final codexCmp = b.codexCount.compareTo(a.codexCount);
+      if (codexCmp != 0) return codexCmp;
+      return b.powerWithTitle.compareTo(a.powerWithTitle);
+    });
+
+    return profiles.take(limit).toList();
+  }
+
+  Future<void> updateInfiniteTowerRanking({
+    required String nickname,
+    required int floor,
+    required String swordId,
+    required String swordName,
+    required int swordLevel,
+    required int swordBreakthroughLevel,
+    required int swordPower,
+  }) async {
+    if (myUserId.isEmpty || floor <= 0) return;
+
+    final ref = _firestore.collection(_publicUsersCollection).doc(myUserId);
+
+    try {
+      await _firestore.runTransaction((tx) async {
+        final snap = await tx.get(ref);
+        final data = snap.data() ?? <String, dynamic>{};
+        final currentFloor = _parseInt(data['infiniteTowerBestFloor']);
+        final currentPower = _parseInt(data['infiniteTowerBestPower'], 1 << 30);
+        final reachedAt = data['infiniteTowerBestFloorReachedAt'];
+
+        final isHigherFloor = floor > currentFloor;
+        final isSameFloorLowerPower =
+            floor == currentFloor &&
+            swordPower > 0 &&
+            swordPower < currentPower;
+        final needsReachedAt = reachedAt == null && floor >= currentFloor;
+
+        if (!isHigherFloor && !isSameFloorLowerPower && !needsReachedAt) {
+          return;
+        }
+
+        final update = <String, dynamic>{
+          'nickname': nickname,
+          'infiniteTowerBestFloor': isHigherFloor ? floor : currentFloor,
+          'infiniteTowerBestPower': swordPower,
+          'infiniteTowerBestSwordId': swordId,
+          'infiniteTowerBestSwordName': swordName,
+          'infiniteTowerBestSwordLevel': swordLevel,
+          'infiniteTowerBestSwordBreakthroughLevel': swordBreakthroughLevel,
+          'infiniteTowerBestRunUpdatedAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+
+        if (isHigherFloor || needsReachedAt) {
+          update['infiniteTowerBestFloorReachedAt'] =
+              FieldValue.serverTimestamp();
+        }
+
+        tx.set(ref, update, SetOptions(merge: true));
+      });
+      debugPrint('무한의 탑 랭킹 업데이트: $floor층');
+    } catch (e) {
+      debugPrint('무한의 탑 랭킹 업데이트 실패: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchInfiniteTowerRankings({
+    int limit = 100,
+  }) async {
+    final rankings = <Map<String, dynamic>>[];
+
+    try {
+      final snap = await _firestore
+          .collection(_publicUsersCollection)
+          .orderBy('infiniteTowerBestFloor', descending: true)
+          .limit(limit)
+          .get();
+
+      for (final doc in snap.docs) {
+        final entry = _towerRankingFromData(doc.id, doc.data(), 'google');
+        if (entry != null) rankings.add(entry);
+      }
+    } catch (e) {
+      debugPrint('구글 무한의 탑 랭킹 로드 실패: $e');
+    }
+
+    try {
+      final snap = await _firestore
+          .collection(_tossUsersCollection)
+          .orderBy('infiniteTowerBestFloor', descending: true)
+          .limit(limit)
+          .get();
+
+      for (final doc in snap.docs) {
+        if (rankings.any((r) => r['id'] == doc.id)) continue;
+        final entry = _towerRankingFromData(doc.id, doc.data(), 'toss');
+        if (entry != null) rankings.add(entry);
+      }
+    } catch (e) {
+      debugPrint('토스 무한의 탑 랭킹 로드 실패: $e');
+    }
+
+    rankings.sort((a, b) {
+      final floorCmp = (b['floor'] as int).compareTo(a['floor'] as int);
+      if (floorCmp != 0) return floorCmp;
+      final reachedCmp = (a['reachedAt'] as DateTime).compareTo(
+        b['reachedAt'] as DateTime,
+      );
+      if (reachedCmp != 0) return reachedCmp;
+      return (a['power'] as int).compareTo(b['power'] as int);
+    });
+
+    return rankings.take(limit).toList();
+  }
+
+  Map<String, dynamic>? _towerRankingFromData(
+    String id,
+    Map<String, dynamic> d,
+    String platform,
+  ) {
+    final floor = _parseInt(d['infiniteTowerBestFloor']);
+    if (floor <= 0) return null;
+
+    return {
+      'id': id,
+      'name': d['nickname'] ?? '알 수 없음',
+      'floor': floor,
+      'reachedAt': _parseUpdatedAt(d['infiniteTowerBestFloorReachedAt']),
+      'power': _parseInt(d['infiniteTowerBestPower']),
+      'swordId':
+          d['infiniteTowerBestSwordId'] ?? d['equippedSwordId'] ?? 'sword_001',
+      'swordName': d['infiniteTowerBestSwordName'] ?? '검',
+      'swordLevel': _parseInt(
+        d['infiniteTowerBestSwordLevel'],
+        _parseInt(d['equippedSwordLevel'], 1),
+      ),
+      'swordBreakthroughLevel': _parseInt(
+        d['infiniteTowerBestSwordBreakthroughLevel'],
+        _parseInt(d['equippedSwordBreakthroughLevel']),
+      ),
+      'platform': platform,
+      'isOnline': true,
+    };
+  }
+
+  /// 비슷한 레벨의 랜덤 상대 찾기
   Future<PlayerProfile?> findRandomOpponent({
     int myLevel = 1,
     int preferredRange = 5,
@@ -395,7 +678,7 @@ class OnlinePlayerService {
             final data = doc.data();
             return PlayerProfile(
               userId: doc.id,
-              nickname: data['nickname'] ?? '?????음',
+              nickname: data['nickname'] ?? '알 수 없음',
               swordId: data['equippedSwordId'] ?? 'sword_001',
               swordLevel: data['equippedSwordLevel'] ?? 1,
               swordBreakthroughLevel:
@@ -404,6 +687,7 @@ class OnlinePlayerService {
               updatedAt: DateTime.now(),
               totalBattle: data['totalBattle'] ?? 0,
               totalBattleWin: data['totalBattleWin'] ?? 0,
+              codexCount: data['codexCount'] ?? 0,
             );
           })
           .where((p) => (p.swordLevel - myLevel).abs() <= preferredRange)
@@ -413,7 +697,7 @@ class OnlinePlayerService {
         return candidates[math.Random().nextInt(candidates.length)];
       }
 
-      // NPC ?택
+      // NPC 선택
       final npcCandidates = npcPlayers.where((npc) {
         return (npc.swordLevel - myLevel).abs() <= preferredRange;
       }).toList();
@@ -433,8 +717,67 @@ class OnlinePlayerService {
 
       return null;
     } catch (e) {
-      debugPrint('?️ ?덤 ?? 찾기 ?패: $e');
+      debugPrint('랜덤 상대 찾기 실패: $e');
       return null;
+    }
+  }
+
+  /// Toss 유저에게 배틀 알림 전송 (battle_notifications_appintos)
+  Future<void> sendTossBattleNotification({
+    required String toUserId,
+    required String myNickname,
+    required int myLevel,
+    required String myGrade,
+    required String myElement,
+    required int opponentLevel,
+    required String opponentGrade,
+    required bool opponentWon,
+  }) async {
+    if (toUserId.isEmpty || myUserId.isEmpty) return;
+    try {
+      await _firestore.collection(_tossNotificationsCollection).add({
+        'toUserId': toUserId,
+        'fromUserId': myUserId,
+        'fromNickname': myNickname,
+        'fromLevel': myLevel,
+        'fromGrade': myGrade,
+        'fromElement': myElement,
+        'toLevel': opponentLevel,
+        'toGrade': opponentGrade,
+        'toWon': opponentWon,
+        'timestamp': FieldValue.serverTimestamp(),
+        'read': false,
+      });
+      debugPrint('토스 배틀 알림 전송: $myNickname → $toUserId');
+    } catch (e) {
+      debugPrint('토스 배틀 알림 전송 실패: $e');
+    }
+  }
+
+  /// 상대방 totalBattle / totalBattleWin 업데이트
+  Future<void> updateOpponentBattleStats({
+    required String opponentUserId,
+    required bool opponentWon,
+    required String platform,
+  }) async {
+    if (opponentUserId.isEmpty) return;
+    try {
+      final collection = platform == 'toss'
+          ? _tossUsersCollection
+          : _publicUsersCollection;
+      final data = <String, dynamic>{'totalBattle': FieldValue.increment(1)};
+      if (opponentWon) data['totalBattleWin'] = FieldValue.increment(1);
+      await _firestore
+          .collection(collection)
+          .doc(opponentUserId)
+          .set(data, SetOptions(merge: true));
+      _rankingsCache = null;
+      _rankingsCacheTime = null;
+      debugPrint(
+        '상대방 승패 업데이트: $opponentUserId (${opponentWon ? "승" : "패"}, $platform)',
+      );
+    } catch (e) {
+      debugPrint('상대방 승패 업데이트 실패: $e');
     }
   }
 }

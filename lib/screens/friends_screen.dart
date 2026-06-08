@@ -183,6 +183,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                           child: SwordImageWidget(
                             grade: foundUser!.sword.grade,
                             element: foundUser!.sword.element,
+                            swordId: foundUser!.swordId,
                             level: foundUser!.swordLevel,
                             breakthroughLevel:
                                 foundUser!.swordBreakthroughLevel,
@@ -439,6 +440,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
             child: SwordImageWidget(
               grade: friend.sword.grade,
               element: friend.sword.element,
+              swordId: friend.swordId,
               level: friend.swordLevel,
               breakthroughLevel: friend.swordBreakthroughLevel,
               size: 56,

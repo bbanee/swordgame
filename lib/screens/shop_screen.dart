@@ -1,10 +1,19 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../data/shop.dart';
 import '../services/purchase_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 
 class ShopScreen extends StatefulWidget {
+  static const _baseAsset = 'assets/images/home/season1_shop_scene_body_v3.png';
+  static const _itemFrameAsset =
+      'assets/images/home/season1_shop_item_frame_v1.png';
+  static const _baseWidth = 941.0;
+  static const _baseHeight = 1671.0;
+
   final int gold;
   final int diamond;
   final int enhanceStone;
@@ -28,7 +37,7 @@ class ShopScreen extends StatefulWidget {
   State<ShopScreen> createState() => _ShopScreenState();
 }
 
-class _ShopScreenState extends State<ShopScreen> with TickerProviderStateMixin {
+class _ShopScreenState extends State<ShopScreen> {
   late int _gold;
   late int _diamond;
   late int _stone;
@@ -36,11 +45,19 @@ class _ShopScreenState extends State<ShopScreen> with TickerProviderStateMixin {
   late int _battleRefillCount;
   late int _maxInventory;
   late bool _hasPremiumPass;
-  
   bool _isPurchasing = false;
+  int _categoryIndex = 0;
 
-  late final TabController _tab;
   final _purchaseService = PurchaseService();
+
+  static const _categories = [
+    ('추천', 'special'),
+    ('다이아', 'diamond_purchase'),
+    ('골드', 'gold_purchase'),
+    ('강화석', 'enhance_stone'),
+    ('배틀', 'battle'),
+    ('인벤', 'inventory'),
+  ];
 
   @override
   void initState() {
@@ -52,462 +69,9 @@ class _ShopScreenState extends State<ShopScreen> with TickerProviderStateMixin {
     _battleRefillCount = widget.battleRefillCount;
     _maxInventory = widget.maxInventory;
     _hasPremiumPass = widget.hasPremiumPass;
-
-    _tab = TabController(length: 6, vsync: this);
-    
-    // 결제 콜백 설정
     _purchaseService.onPurchaseComplete = _onPurchaseComplete;
     _purchaseService.onPurchaseError = _onPurchaseError;
-    _purchaseService.onPurchasePending = _onPurchasePending;
-  }
-  
-  @override
-  void dispose() {
-    _tab.dispose();
-    super.dispose();
-  }
-
-  // =====================================================
-  // 결제 콜백
-  // =====================================================
-  
-  void _onPurchaseComplete(PurchaseResult result) {
-    setState(() => _isPurchasing = false);
-    
-    if (!result.success) {
-      _toast('❌ ${result.errorMessage ?? "구매 실패"}');
-      return;
-    }
-    
-    setState(() {
-      if (result.diamonds > 0) _diamond += result.diamonds;
-      if (result.gold > 0) _gold += result.gold;
-      if (result.stones > 0) _stone += result.stones;
-      if (result.isPremiumPass) _hasPremiumPass = true;
-    });
-    
-    String msg = '✅ 구매 완료!';
-    if (result.diamonds > 0) msg += ' +${result.diamonds}💎';
-    if (result.gold > 0) msg += ' +${formatNumber(result.gold)}G';
-    if (result.stones > 0) msg += ' +${result.stones}🪨';
-    if (result.isPremiumPass) msg = '✅ 프리미엄 패스가 활성화되었습니다!';
-    
-    _toast(msg);
-  }
-  
-  void _onPurchaseError(String error) {
-    setState(() => _isPurchasing = false);
-    _toast('❌ $error');
-  }
-  
-  void _onPurchasePending() {
-    _toast('⏳ 결제 처리 중...');
-  }
-
-  void _toast(String msg) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
-  // =====================================================
-  // 구매 처리
-  // =====================================================
-
-  void _buy(ShopItem item) {
-    if (item.priceType == 'cash') {
-      _startPurchase(item);
-      return;
-    }
-
-    if (item.priceType == 'gold') {
-      if (_gold < item.price) {
-        _toast('골드가 부족합니다');
-        return;
-      }
-      setState(() {
-        _gold -= item.price;
-        _stone += item.totalAmount;
-      });
-      _toast('+${item.totalAmount} 강화석');
-      return;
-    }
-
-    if (item.priceType == 'diamond') {
-      if (_diamond < item.price) {
-        _toast('다이아가 부족합니다');
-        return;
-      }
-
-      if (item.category == 'gold_purchase') {
-        setState(() {
-          _diamond -= item.price;
-          _gold += item.totalAmount;
-        });
-        _toast('+${formatNumber(item.totalAmount)}G');
-        return;
-      }
-
-      if (item.category == 'enhance_stone') {
-        setState(() {
-          _diamond -= item.price;
-          _stone += item.totalAmount;
-        });
-        _toast('+${item.totalAmount} 강화석');
-        return;
-      }
-
-      if (item.category == 'battle') {
-        if (_battleRefillCount >= AppConstants.maxBattleRefill) {
-          _toast('오늘은 더 이상 충전할 수 없습니다');
-          return;
-        }
-        setState(() {
-          _diamond -= item.price;
-          _battleRefillCount += 1;
-          _battleCount += item.totalAmount;
-        });
-        _toast('배틀 +${item.totalAmount}');
-        return;
-      }
-    }
-  }
-  
-  void _startPurchase(ShopItem item) {
-    if (_isPurchasing) {
-      _toast('결제 처리 중입니다...');
-      return;
-    }
-    
-    if (item.id == 'premium_pass' && _hasPremiumPass) {
-      _toast('이미 구매한 상품입니다');
-      return;
-    }
-    
-    _showPurchaseConfirmDialog(item);
-  }
-  
-  void _showPurchaseConfirmDialog(ShopItem item) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF2a2a4a),
-        title: const Text('구매 확인', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(item.name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(item.description, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.amber.withOpacity(0.3)),
-              ),
-              child: Text(
-                '${formatNumber(item.price)}원',
-                style: const TextStyle(color: Colors.amber, fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _executePurchase(item);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('구매하기', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  void _executePurchase(ShopItem item) async {
-    setState(() => _isPurchasing = true);
-    
-    try {
-      await _purchaseService.purchaseByShopId(item.id);
-    } catch (e) {
-      _onPurchaseError('결제 중 오류가 발생했습니다: $e');
-    }
-  }
-  
-  void _restorePurchases() async {
-    _toast('구매 복원 중...');
-    try {
-      await _purchaseService.restorePurchases();
-      _toast('✅ 복원 완료');
-    } catch (e) {
-      _toast('❌ 복원 실패: $e');
-    }
-  }
-
-  (int, String)? _nextInventoryPrice() {
-    if (_maxInventory >= AppConstants.maxInventoryLimit) return null;
-    final nextSlot = _maxInventory + 1;
-    final price = inventoryPrices.firstWhere((p) => p.$1 == nextSlot, orElse: () => (0, 0, ''));
-    if (price.$1 == 0) return null;
-    return (price.$2, price.$3);
-  }
-
-  void _buyInventorySlot() {
-    final next = _nextInventoryPrice();
-    if (next == null) {
-      _toast('최대치입니다');
-      return;
-    }
-    final (price, type) = next;
-    if (type == 'gold' && _gold < price) {
-      _toast('골드가 부족합니다');
-      return;
-    }
-    if (type == 'diamond' && _diamond < price) {
-      _toast('다이아가 부족합니다');
-      return;
-    }
-    setState(() {
-      if (type == 'gold') _gold -= price;
-      if (type == 'diamond') _diamond -= price;
-      _maxInventory += 1;
-    });
-    _toast('인벤토리 +1 (현재 $_maxInventory칸)');
-  }
-
-  // ✅ 수정: overflow 방지
-  Widget _moneyBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,  // ✅ 추가
-              children: [
-                const Text('💰', style: TextStyle(fontSize: 14)),  // ✅ 16 → 14
-                const SizedBox(width: 4),  // ✅ 6 → 4
-                Flexible(  // ✅ 추가
-                  child: Text(
-                    formatGold(_gold),  // ✅ formatNumber → formatGold (축약)
-                    style: AppTextStyles.gold.copyWith(fontSize: 13),  // ✅ 크기 축소
-                    overflow: TextOverflow.ellipsis,  // ✅ 추가
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,  // ✅ 추가
-              children: [
-                const Text('💎', style: TextStyle(fontSize: 14)),  // ✅ 16 → 14
-                const SizedBox(width: 4),  // ✅ 6 → 4
-                Flexible(  // ✅ 추가
-                  child: Text(
-                    '$_diamond',
-                    style: AppTextStyles.diamond.copyWith(fontSize: 13),  // ✅ 크기 축소
-                    overflow: TextOverflow.ellipsis,  // ✅ 추가
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,  // ✅ 추가
-              children: [
-                const Text('🪨', style: TextStyle(fontSize: 14)),  // ✅ 16 → 14
-                const SizedBox(width: 4),  // ✅ 6 → 4
-                Flexible(  // ✅ 추가
-                  child: Text(
-                    '$_stone',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),  // ✅ 크기 축소
-                    overflow: TextOverflow.ellipsis,  // ✅ 추가
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _list(String category) {
-    final items = getShopItemsByCategory(category);
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (_, i) => _buildItemCard(items[i]),
-    );
-  }
-  
-  Widget _buildItemCard(ShopItem it) {
-    final priceText = it.priceType == 'cash'
-        ? '${formatNumber(it.price)}원'
-        : it.priceType == 'gold' ? '${formatNumber(it.price)}G' : '${it.price}💎';
-    
-    bool alreadyPurchased = (it.id == 'premium_pass' && _hasPremiumPass);
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: it.isSpecial ? LinearGradient(colors: [Colors.purple.withOpacity(0.2), Colors.indigo.withOpacity(0.2)]) : null,
-        color: it.isSpecial ? null : const Color(0xFF2a2a4a),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: it.isSpecial ? Colors.purple.withOpacity(0.5) : Colors.white.withOpacity(0.1)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  it.name,
-                  style: TextStyle(color: alreadyPurchased ? Colors.grey : Colors.white, fontWeight: FontWeight.bold, fontSize: it.isSpecial ? 16 : 14),
-                  overflow: TextOverflow.ellipsis,  // ✅ 추가
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  it.description,
-                  style: TextStyle(color: alreadyPurchased ? Colors.grey : Colors.white60, fontSize: 12),
-                  overflow: TextOverflow.ellipsis,  // ✅ 추가
-                  maxLines: 2,  // ✅ 추가
-                ),
-                if (it.bonus > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
-                      child: Text('보너스 +${it.bonus}', style: const TextStyle(color: Colors.amber, fontSize: 11)),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(priceText, style: TextStyle(color: alreadyPurchased ? Colors.grey : Colors.white, fontWeight: FontWeight.bold, fontSize: it.priceType == 'cash' ? 16 : 14)),
-              const SizedBox(height: 6),
-              ElevatedButton(
-                onPressed: alreadyPurchased || _isPurchasing ? null : () => _buy(it),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: alreadyPurchased ? Colors.grey : (it.priceType == 'cash' ? Colors.green : Colors.indigo),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-                child: Text(alreadyPurchased ? '구매완료' : (_isPurchasing ? '...' : '구매'), style: const TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Widget _specialTab() {
-    final items = getSpecialItems();
-    
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // TODO: 구매 복원 기능 - 나중에 되살리기
-        // Container(
-        //   margin: const EdgeInsets.only(bottom: 16),
-        //   child: OutlinedButton.icon(
-        //     onPressed: _restorePurchases,
-        //     icon: const Icon(Icons.restore, color: Colors.white70),
-        //     label: const Text('구매 복원', style: TextStyle(color: Colors.white70)),
-        //     style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white24), padding: const EdgeInsets.symmetric(vertical: 12)),
-        //   ),
-        // ),
-        
-        if (_hasPremiumPass)
-          Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.green.withOpacity(0.3))),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('✅ 활성화된 혜택', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                SizedBox(height: 8),
-                Text('• 프리미엄 패스', style: TextStyle(color: Colors.white70)),
-              ],
-            ),
-          ),
-        
-        ...items.map((it) => Padding(padding: const EdgeInsets.only(bottom: 12), child: _buildItemCard(it))),
-        
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(8)),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('💡 안내', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Text('• 프리미엄 패스: 시즌 패스의 프리미엄 보상을 받을 수 있습니다.', style: TextStyle(color: Colors.white54, fontSize: 12)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _inventoryTab() {
-    final next = _nextInventoryPrice();
-    final canExpand = _maxInventory < AppConstants.maxInventoryLimit;
-    String nextText = next != null ? (next.$2 == 'gold' ? '${formatNumber(next.$1)}G' : '${next.$1}💎') : '최대치';
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: AppDecorations.card(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('인벤토리 확장', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text('현재: $_maxInventory / ${AppConstants.maxInventoryLimit}', style: const TextStyle(color: Colors.white70)),
-              const SizedBox(height: 6),
-              Text('다음 확장 비용: $nextText', style: const TextStyle(color: Colors.white70)),
-              const SizedBox(height: 12),
-              SizedBox(width: double.infinity, child: ElevatedButton(onPressed: canExpand ? _buyInventorySlot : null, child: const Text('1칸 확장 구매'))),
-              const SizedBox(height: 6),
-              const Text('규칙: 10→15는 골드, 15→20은 다이아로만 확장됩니다.', style: TextStyle(color: Colors.white54, fontSize: 12)),
-            ],
-          ),
-        ),
-      ],
-    );
+    _purchaseService.onPurchasePending = () => _toast('결제 처리 중...');
   }
 
   void _close() {
@@ -527,49 +91,445 @@ class _ShopScreenState extends State<ShopScreen> with TickerProviderStateMixin {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        _close();
+        if (!didPop) _close();
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('상점'),
-          backgroundColor: const Color(0xFF1a1a2e),
-          leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: _close),
-          bottom: TabBar(
-            controller: _tab,
-            isScrollable: true,
-            tabs: const [
-              Tab(text: '⭐ 특별'),
-              Tab(text: '💎 다이아'),
-              Tab(text: '💰 골드'),
-              Tab(text: '🪨 강화석'),
-              Tab(text: '⚔️ 배틀'),
-              Tab(text: '📦 인벤'),
-            ],
-          ),
-          actions: [IconButton(onPressed: _close, icon: const Icon(Icons.check), tooltip: '적용하고 닫기')],
-        ),
-        body: SafeArea(
-          top: false,
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [AppColors.backgroundDark, AppColors.background]),
-            ),
-            child: Column(
-              children: [
-                Padding(padding: const EdgeInsets.all(12), child: _moneyBar()),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tab,
-                    children: [
-                      _specialTab(),
-                      _list('diamond_purchase'),
-                      _list('gold_purchase'),
-                      _list('enhance_stone'),
-                      _list('battle'),
-                      _inventoryTab(),
-                    ],
+        backgroundColor: Colors.black,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final layout = _ShopLayout(
+              constraints.maxWidth,
+              constraints.maxHeight,
+            );
+            return ClipRect(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Image.asset(
+                      ShopScreen._baseAsset,
+                      fit: BoxFit.fill,
+                      filterQuality: FilterQuality.high,
+                    ),
                   ),
+                  ..._buildOverlays(layout),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildOverlays(_ShopLayout layout) {
+    return [
+      _tap(layout, _ShopRects.backButton, _close),
+      _box(
+        layout,
+        _ShopRects.diamond,
+        _valueText(layout, formatGold(_diamond)),
+      ),
+      _box(layout, _ShopRects.gold, _valueText(layout, formatGold(_gold))),
+      _box(layout, _ShopRects.stone, _valueText(layout, formatGold(_stone))),
+      _box(layout, _ShopRects.battle, _valueText(layout, '$_battleCount')),
+      for (var i = 0; i < _categories.length; i++) ...[
+        _box(
+          layout,
+          _ShopRects.tabLabels[i],
+          _tabText(layout, _categories[i].$1, i == _categoryIndex),
+        ),
+        _tap(
+          layout,
+          _ShopRects.tabs[i],
+          () => setState(() => _categoryIndex = i),
+        ),
+      ],
+      _box(layout, _ShopRects.list, _buildItemList(layout)),
+    ];
+  }
+
+  Widget _buildItemList(_ShopLayout layout) {
+    final category = _categories[_categoryIndex].$2;
+    if (category == 'inventory') {
+      return _inventoryExpansion(layout);
+    }
+    final items = category == 'special'
+        ? getSpecialItems()
+        : getShopItemsByCategory(category);
+
+    return ListView.builder(
+      padding: EdgeInsets.fromLTRB(
+        layout.u(14),
+        layout.u(24),
+        layout.u(14),
+        layout.u(24),
+      ),
+      itemCount: items.length,
+      itemBuilder: (_, i) => _itemRow(layout, items[i]),
+    );
+  }
+
+  Widget _itemRow(_ShopLayout layout, ShopItem item) {
+    final alreadyPurchased = item.id == 'premium_pass' && _hasPremiumPass;
+    return Padding(
+      padding: EdgeInsets.only(bottom: layout.u(16)),
+      child: SizedBox(
+        height: layout.u(184),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final sx = constraints.maxWidth / 850.0;
+            final sy = constraints.maxHeight / 184.0;
+            Rect r(Rect rect) => Rect.fromLTWH(
+              rect.left * sx,
+              rect.top * sy,
+              rect.width * sx,
+              rect.height * sy,
+            );
+
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: Image.asset(
+                    ShopScreen._itemFrameAsset,
+                    fit: BoxFit.fill,
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
+                Positioned.fromRect(
+                  rect: r(_ShopItemRects.icon),
+                  child: Center(
+                    child: Icon(
+                      _itemIcon(item),
+                      color: item.isSpecial
+                          ? Colors.purpleAccent
+                          : Colors.amber,
+                      size: layout.u(58),
+                    ),
+                  ),
+                ),
+                Positioned.fromRect(
+                  rect: r(_ShopItemRects.name),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _plainText(
+                      layout,
+                      item.name,
+                      25,
+                      color: alreadyPurchased ? Colors.grey : Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Positioned.fromRect(
+                  rect: r(_ShopItemRects.description),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _plainText(
+                      layout,
+                      item.description,
+                      17,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Positioned.fromRect(
+                  rect: r(_ShopItemRects.price),
+                  child: _fitText(layout, _priceText(item), 20),
+                ),
+                Positioned.fromRect(
+                  rect: r(_ShopItemRects.buyButton),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: alreadyPurchased || _isPurchasing
+                        ? null
+                        : () => _buy(item),
+                    child: _fitText(
+                      layout,
+                      alreadyPurchased
+                          ? '구매 완료'
+                          : (_isPurchasing ? '처리 중' : '구매'),
+                      24,
+                      color: alreadyPurchased ? Colors.grey : Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _inventoryExpansion(_ShopLayout layout) {
+    final next = _nextInventoryPrice();
+    final canExpand = next != null;
+    final priceText = next == null
+        ? '최대치'
+        : next.$2 == 'gold'
+        ? '${formatGold(next.$1)}G'
+        : '${next.$1} 다이아';
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        layout.u(48),
+        layout.u(70),
+        layout.u(48),
+        layout.u(0),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _plainText(layout, '인벤토리 확장', 32, fontWeight: FontWeight.w900),
+          SizedBox(height: layout.u(18)),
+          _plainText(
+            layout,
+            '현재 $_maxInventory / ${AppConstants.maxInventoryLimit}칸',
+            24,
+            color: Colors.white70,
+          ),
+          SizedBox(height: layout.u(12)),
+          _plainText(layout, '다음 확장 비용: $priceText', 24, color: Colors.amber),
+          SizedBox(height: layout.u(36)),
+          GestureDetector(
+            onTap: canExpand ? _buyInventorySlot : null,
+            child: SizedBox(
+              width: double.infinity,
+              height: layout.u(84),
+              child: Center(
+                child: _fitText(
+                  layout,
+                  canExpand ? '구매' : '최대치',
+                  28,
+                  color: canExpand ? Colors.white : Colors.grey,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _buy(ShopItem item) {
+    if (item.priceType == 'cash') {
+      _startPurchase(item);
+      return;
+    }
+
+    if (item.priceType == 'gold') {
+      if (_gold < item.price) {
+        _toast('골드가 부족합니다');
+        return;
+      }
+      setState(() {
+        _gold -= item.price;
+        _stone += item.totalAmount;
+      });
+      _toast('강화석 +${item.totalAmount}');
+      return;
+    }
+
+    if (_diamond < item.price) {
+      _toast('다이아가 부족합니다');
+      return;
+    }
+
+    if (item.category == 'gold_purchase') {
+      setState(() {
+        _diamond -= item.price;
+        _gold += item.totalAmount;
+      });
+      _toast('골드 +${formatGold(item.totalAmount)}');
+    } else if (item.category == 'enhance_stone') {
+      setState(() {
+        _diamond -= item.price;
+        _stone += item.totalAmount;
+      });
+      _toast('강화석 +${item.totalAmount}');
+    } else if (item.category == 'battle') {
+      if (_battleRefillCount >= AppConstants.maxBattleRefill) {
+        _toast('오늘은 더 이상 충전할 수 없습니다');
+        return;
+      }
+      setState(() {
+        _diamond -= item.price;
+        _battleRefillCount += 1;
+        _battleCount += item.totalAmount;
+      });
+      _toast('배틀 +${item.totalAmount}');
+    }
+  }
+
+  void _startPurchase(ShopItem item) {
+    if (_isPurchasing) {
+      _toast('결제 처리 중입니다');
+      return;
+    }
+    if (item.id == 'premium_pass' && _hasPremiumPass) {
+      _toast('이미 구매한 상품입니다');
+      return;
+    }
+    setState(() => _isPurchasing = true);
+    _purchaseService.purchaseByShopId(item.id);
+  }
+
+  void _onPurchaseComplete(PurchaseResult result) {
+    setState(() => _isPurchasing = false);
+    if (!result.success) {
+      _toast(result.errorMessage ?? '구매 실패');
+      return;
+    }
+    setState(() {
+      if (result.diamonds > 0) _diamond += result.diamonds;
+      if (result.gold > 0) _gold += result.gold;
+      if (result.stones > 0) _stone += result.stones;
+      if (result.isPremiumPass) _hasPremiumPass = true;
+    });
+    _toast('구매 완료');
+  }
+
+  void _onPurchaseError(String error) {
+    setState(() => _isPurchasing = false);
+    _toast(error);
+  }
+
+  (int, String)? _nextInventoryPrice() {
+    if (_maxInventory >= AppConstants.maxInventoryLimit) return null;
+    final nextSlot = _maxInventory + 1;
+    final price = inventoryPrices.firstWhere(
+      (p) => p.$1 == nextSlot,
+      orElse: () => (0, 0, ''),
+    );
+    if (price.$1 == 0) return null;
+    return (price.$2, price.$3);
+  }
+
+  void _buyInventorySlot() {
+    final next = _nextInventoryPrice();
+    if (next == null) {
+      _toast('최대치입니다');
+      return;
+    }
+    if (next.$2 == 'gold' && _gold < next.$1) {
+      _toast('골드가 부족합니다');
+      return;
+    }
+    if (next.$2 == 'diamond' && _diamond < next.$1) {
+      _toast('다이아가 부족합니다');
+      return;
+    }
+    setState(() {
+      if (next.$2 == 'gold') _gold -= next.$1;
+      if (next.$2 == 'diamond') _diamond -= next.$1;
+      _maxInventory += 1;
+    });
+    _toast('인벤토리 +1');
+  }
+
+  String _priceText(ShopItem item) {
+    if (item.priceType == 'cash') return '${formatNumber(item.price)}원';
+    if (item.priceType == 'gold') return '${formatGold(item.price)}G';
+    return '${item.price} 다이아';
+  }
+
+  IconData _itemIcon(ShopItem item) {
+    if (item.category == 'diamond_purchase') return Icons.diamond;
+    if (item.category == 'gold_purchase') return Icons.monetization_on;
+    if (item.category == 'enhance_stone') return Icons.auto_awesome;
+    if (item.category == 'battle') return Icons.sports_mma;
+    return Icons.workspace_premium;
+  }
+
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  Widget _valueText(_ShopLayout layout, String text) {
+    return _fitText(layout, text, 22, fontWeight: FontWeight.w900);
+  }
+
+  Widget _tabText(_ShopLayout layout, String text, bool active) {
+    return _fitText(
+      layout,
+      text,
+      24,
+      color: active ? Colors.amber : Colors.white,
+      fontWeight: FontWeight.w900,
+    );
+  }
+
+  Widget _plainText(
+    _ShopLayout layout,
+    String text,
+    double baseSize, {
+    Color color = Colors.white,
+    FontWeight fontWeight = FontWeight.w700,
+  }) {
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: color,
+        fontSize: layout.u(baseSize),
+        fontWeight: fontWeight,
+        shadows: const [
+          Shadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 1)),
+        ],
+      ),
+    );
+  }
+
+  Widget _fitText(
+    _ShopLayout layout,
+    String text,
+    double baseSize, {
+    Color color = Colors.white,
+    FontWeight fontWeight = FontWeight.w700,
+  }) {
+    final fontSize = layout.u(baseSize);
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: layout.u(4)),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
+          child: Text(
+            text,
+            maxLines: 1,
+            softWrap: false,
+            textAlign: TextAlign.center,
+            textHeightBehavior: const TextHeightBehavior(
+              applyHeightToFirstAscent: false,
+              applyHeightToLastDescent: false,
+            ),
+            strutStyle: StrutStyle(
+              fontSize: fontSize,
+              height: 1,
+              forceStrutHeight: true,
+            ),
+            style: TextStyle(
+              color: color,
+              fontSize: fontSize,
+              fontWeight: fontWeight,
+              height: 1,
+              shadows: const [
+                Shadow(
+                  color: Colors.black,
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
                 ),
               ],
             ),
@@ -578,4 +538,72 @@ class _ShopScreenState extends State<ShopScreen> with TickerProviderStateMixin {
       ),
     );
   }
+
+  Widget _box(_ShopLayout layout, Rect rect, Widget child) {
+    return Positioned.fromRect(rect: layout.r(rect), child: child);
+  }
+
+  Widget _tap(_ShopLayout layout, Rect rect, VoidCallback onTap) {
+    return _box(
+      layout,
+      rect,
+      GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: onTap,
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+class _ShopLayout {
+  final double width;
+  final double height;
+  late final double sx = width / ShopScreen._baseWidth;
+  late final double sy = height / ShopScreen._baseHeight;
+  late final double s = math.min(sx, sy);
+
+  _ShopLayout(this.width, this.height);
+
+  double u(double value) => value * s;
+
+  Rect r(Rect rect) => Rect.fromLTWH(
+    rect.left * sx,
+    rect.top * sy,
+    rect.width * sx,
+    rect.height * sy,
+  );
+}
+
+class _ShopRects {
+  static const backButton = Rect.fromLTWH(18, 24, 84, 84);
+  static const diamond = Rect.fromLTWH(100, 453, 150, 48);
+  static const gold = Rect.fromLTWH(318, 453, 150, 48);
+  static const stone = Rect.fromLTWH(548, 453, 138, 48);
+  static const battle = Rect.fromLTWH(724, 453, 150, 48);
+  static const tabs = [
+    Rect.fromLTWH(29, 536, 137, 70),
+    Rect.fromLTWH(177, 536, 137, 70),
+    Rect.fromLTWH(321, 536, 137, 70),
+    Rect.fromLTWH(469, 536, 137, 70),
+    Rect.fromLTWH(617, 536, 137, 70),
+    Rect.fromLTWH(763, 536, 140, 70),
+  ];
+  static const tabLabels = [
+    Rect.fromLTWH(39, 548, 117, 46),
+    Rect.fromLTWH(187, 548, 117, 46),
+    Rect.fromLTWH(331, 548, 117, 46),
+    Rect.fromLTWH(479, 548, 117, 46),
+    Rect.fromLTWH(627, 548, 117, 46),
+    Rect.fromLTWH(773, 548, 120, 46),
+  ];
+  static const list = Rect.fromLTWH(32, 594, 876, 970);
+}
+
+class _ShopItemRects {
+  static const icon = Rect.fromLTWH(26, 20, 130, 136);
+  static const name = Rect.fromLTWH(202, 42, 395, 38);
+  static const description = Rect.fromLTWH(202, 83, 395, 44);
+  static const price = Rect.fromLTWH(660, 28, 168, 45);
+  static const buyButton = Rect.fromLTWH(612, 107, 224, 55);
 }

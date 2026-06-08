@@ -17,14 +17,13 @@ const double underdogMaxBonus = 0.30;
 
 /// 등급별 레벨당 전투력 보너스 (v13)
 const Map<SwordGrade, int> gradeLevelBonus = {
-  SwordGrade.normal: 6,      // v12: 8 → 6
-  SwordGrade.rare: 7,        // v12: 9 → 7
-  SwordGrade.unique: 8,      // v12: 9 → 8
-  SwordGrade.legend: 10,     // v12: 13 → 10
-  SwordGrade.hidden: 13,     // v12: 15 → 13
-  SwordGrade.immortal: 17,   // v12: 18 → 17
+  SwordGrade.normal: 6, // v12: 8 → 6
+  SwordGrade.rare: 7, // v12: 9 → 7
+  SwordGrade.unique: 8, // v12: 9 → 8
+  SwordGrade.legend: 10, // v12: 13 → 10
+  SwordGrade.hidden: 13, // v12: 15 → 13
+  SwordGrade.immortal: 17, // v12: 18 → 17
 };
-
 
 /// HP 계산 상수
 const int baseHp = 2500;
@@ -35,8 +34,8 @@ const int baseDamage = 45;
 const double damagePerPower = 0.12;
 
 /// 상성 배율 (유리 시 +5~10% 승률 목표)
-const double elementAdvantage = 1.04;       // v12: 1.025 → 1.04 (+4%)
-const double elementDisadvantage = 0.96;    // v12: 0.975 → 0.96 (-4%)
+const double elementAdvantage = 1.04; // v12: 1.025 → 1.04 (+4%)
+const double elementDisadvantage = 0.96; // v12: 0.975 → 0.96 (-4%)
 const double skillAdvantageMultiplier = 1.10;
 const double skillDisadvantageMultiplier = 0.90;
 
@@ -54,22 +53,22 @@ const double levelCritBonus = 0.002;
 
 /// 등급별 회피 보너스 (v13 - 고등급 유리)
 const Map<SwordGrade, double> gradeDodgeBonus = {
-  SwordGrade.normal: 0.02,     // v12: 0.04 → 0.02
-  SwordGrade.rare: 0.025,      // v12: 0.03 → 0.025
-  SwordGrade.unique: 0.03,     // v12: 0.025 → 0.03
-  SwordGrade.legend: 0.035,    // v12: 0.02 → 0.035
-  SwordGrade.hidden: 0.04,     // v12: 0.025 → 0.04
-  SwordGrade.immortal: 0.05,   // v12: 0.02 → 0.05
+  SwordGrade.normal: 0.02, // v12: 0.04 → 0.02
+  SwordGrade.rare: 0.025, // v12: 0.03 → 0.025
+  SwordGrade.unique: 0.03, // v12: 0.025 → 0.03
+  SwordGrade.legend: 0.035, // v12: 0.02 → 0.035
+  SwordGrade.hidden: 0.04, // v12: 0.025 → 0.04
+  SwordGrade.immortal: 0.05, // v12: 0.02 → 0.05
 };
 
 /// 등급별 치명타 보너스 (v13 - 고등급 유리)
 const Map<SwordGrade, double> gradeCritBonus = {
-  SwordGrade.normal: 0.01,     // v12: 0.02 → 0.01
-  SwordGrade.rare: 0.02,       // v12: 0.04 → 0.02
-  SwordGrade.unique: 0.03,     // v12: 0.03 → 0.03 (유지)
-  SwordGrade.legend: 0.04,     // v12: 0.025 → 0.04
-  SwordGrade.hidden: 0.05,     // v12: 0.03 → 0.05
-  SwordGrade.immortal: 0.06,   // v12: 0.035 → 0.06
+  SwordGrade.normal: 0.01, // v12: 0.02 → 0.01
+  SwordGrade.rare: 0.02, // v12: 0.04 → 0.02
+  SwordGrade.unique: 0.03, // v12: 0.03 → 0.03 (유지)
+  SwordGrade.legend: 0.04, // v12: 0.025 → 0.04
+  SwordGrade.hidden: 0.05, // v12: 0.03 → 0.05
+  SwordGrade.immortal: 0.06, // v12: 0.035 → 0.06
 };
 
 // ============================================================
@@ -86,7 +85,8 @@ class BattleParticipant {
   final SkillType primarySkillType;
   final List<SkillData> skills;
   final String swordName;
-  final int titleBonus;  // 칭호 보너스
+  final String? swordId;
+  final int titleBonus; // 칭호 보너스
 
   BattleParticipant({
     required this.id,
@@ -98,10 +98,12 @@ class BattleParticipant {
     required this.primarySkillType,
     required this.skills,
     this.swordName = '검',
-    this.titleBonus = 0,  // 기본값 0 (NPC/상대방은 0)
+    this.swordId,
+    this.titleBonus = 0, // 기본값 0 (NPC/상대방은 0)
   });
 
-  int get power => baseAtk + swordLevel * (gradeLevelBonus[grade] ?? 10) + titleBonus;
+  int get power =>
+      baseAtk + swordLevel * (gradeLevelBonus[grade] ?? 10) + titleBonus;
   int get hp => 2500 + (power * 1.8).round();
 }
 
@@ -129,7 +131,7 @@ class BattleResult {
     required this.oppMaxHp,
     this.totalTurns = 0,
   });
-  
+
   // 호환용 getter
   bool get isWin => iWin;
   int get goldEarned => rewardGold;
@@ -183,7 +185,7 @@ class _CombatantState {
   bool get isStunned => debuffs.containsKey('stun');
   bool get hasDodgeBuff => buffs.containsKey('dodge');
   bool get hasShield => shield > 0 || buffs.containsKey('shield');
-  
+
   double get critBonus => buffs.containsKey('critBoost') ? 0.15 : 0.0;
   double get attackBonus => buffs.containsKey('attackBoost') ? 1.25 : 1.0;
   double get damageReduction => buffs.containsKey('shield') ? 0.75 : 1.0;
@@ -196,12 +198,11 @@ class _CombatantState {
 // ============================================================
 
 class BattleEngine {
-  
   /// 약자 보정 계산
   static double _getUnderdogBonus(int myPower, int oppPower) {
     final diff = oppPower - myPower;
     if (diff <= underdogThreshold) return 1.0;
-    
+
     final bonus = (diff - underdogThreshold) / 100.0 * underdogBonusPer100;
     return 1.0 + math.min(bonus, underdogMaxBonus);
   }
@@ -238,12 +239,22 @@ class BattleEngine {
     logs.add('⚔️ 배틀 시작!');
     logs.add('');
     logs.add('👤 나: ${me.grade.emoji} ${me.name} (+${me.swordLevel})');
-    logs.add('   전투력: ${formatNumber(me.power)} | 원소: ${me.element.emoji}${me.element.nameKr}');
-    logs.add('   스킬상성: ${me.primarySkillType.emoji}${me.primarySkillType.nameKr}');
+    logs.add(
+      '   전투력: ${formatNumber(me.power)} | 원소: ${me.element.emoji}${me.element.nameKr}',
+    );
+    logs.add(
+      '   스킬상성: ${me.primarySkillType.emoji}${me.primarySkillType.nameKr}',
+    );
     logs.add('');
-    logs.add('👤 상대: ${opponent.grade.emoji} ${opponent.name} (+${opponent.swordLevel})');
-    logs.add('   전투력: ${formatNumber(opponent.power)} | 원소: ${opponent.element.emoji}${opponent.element.nameKr}');
-    logs.add('   스킬상성: ${opponent.primarySkillType.emoji}${opponent.primarySkillType.nameKr}');
+    logs.add(
+      '👤 상대: ${opponent.grade.emoji} ${opponent.name} (+${opponent.swordLevel})',
+    );
+    logs.add(
+      '   전투력: ${formatNumber(opponent.power)} | 원소: ${opponent.element.emoji}${opponent.element.nameKr}',
+    );
+    logs.add(
+      '   스킬상성: ${opponent.primarySkillType.emoji}${opponent.primarySkillType.nameKr}',
+    );
     logs.add('');
     logs.add('━━━━━━━━━━━━━━━━━━━━━━━━');
 
@@ -340,12 +351,22 @@ class BattleEngine {
 
       // HP 상태 표시
       logs.add('');
-      logs.add('📊 HP: ${me.name} ${myState.hp}/${myMaxHp} | ${opponent.name} ${oppState.hp}/${oppMaxHp}');
+      logs.add(
+        '📊 HP: ${me.name} ${myState.hp}/${myMaxHp} | ${opponent.name} ${oppState.hp}/${oppMaxHp}',
+      );
     }
 
     // ===== 결과 판정 =====
-    final iWin = myState.hp > 0 && (oppState.hp <= 0 || myState.hp > oppState.hp);
-    final reward = iWin ? calculateBattleReward(me.swordLevel, opponent.swordLevel, opponent.grade, me.grade) : 0;
+    final iWin =
+        myState.hp > 0 && (oppState.hp <= 0 || myState.hp > oppState.hp);
+    final reward = iWin
+        ? calculateBattleReward(
+            me.swordLevel,
+            opponent.swordLevel,
+            opponent.grade,
+            me.grade,
+          )
+        : 0;
 
     // 패배자의 HP를 0으로 설정 (HP바 표시용)
     int finalMyHp = myState.hp;
@@ -379,7 +400,11 @@ class BattleEngine {
   }
 
   /// 턴 시작 시 DOT/HOT 및 효과 처리
-  static void _processTurnStartEffects(_CombatantState state, String name, List<String> logs) {
+  static void _processTurnStartEffects(
+    _CombatantState state,
+    String name,
+    List<String> logs,
+  ) {
     // DOT 처리
     final dotsToRemove = <_TickEffect>[];
     for (final dot in state.dots) {
@@ -454,8 +479,13 @@ class BattleEngine {
   }
 
   /// 선공 결정
-  static bool _decideFirst(BattleParticipant a, BattleParticipant b, math.Random rng) {
-    final score = (a.swordLevel - b.swordLevel) * 0.3 + ((a.power - b.power) / 300);
+  static bool _decideFirst(
+    BattleParticipant a,
+    BattleParticipant b,
+    math.Random rng,
+  ) {
+    final score =
+        (a.swordLevel - b.swordLevel) * 0.3 + ((a.power - b.power) / 300);
     final p = 0.5 + (score * 0.01);
     final clamped = p.clamp(0.42, 0.58);
     return rng.nextDouble() < clamped;
@@ -515,7 +545,11 @@ class BattleEngine {
     }
 
     // 스킬 선택
-    final skill = _selectSkill(attacker.skills, attackerState.skillCooldowns, rng);
+    final skill = _selectSkill(
+      attacker.skills,
+      attackerState.skillCooldowns,
+      rng,
+    );
 
     // 데미지 계수 초기화
     double dmgMultiplier = 1.0;
@@ -546,10 +580,14 @@ class BattleEngine {
       // 스킬 상성
       if (skill.type.isStrongAgainst(defender.primarySkillType)) {
         dmgMultiplier *= skillAdvantageMultiplier;
-        logs.add('   🔺 스킬 상성 유리! (${skill.type.nameKr} > ${defender.primarySkillType.nameKr})');
+        logs.add(
+          '   🔺 스킬 상성 유리! (${skill.type.nameKr} > ${defender.primarySkillType.nameKr})',
+        );
       } else if (skill.type.isWeakAgainst(defender.primarySkillType)) {
         dmgMultiplier *= skillDisadvantageMultiplier;
-        logs.add('   🔻 스킬 상성 불리 (${skill.type.nameKr} < ${defender.primarySkillType.nameKr})');
+        logs.add(
+          '   🔻 스킬 상성 불리 (${skill.type.nameKr} < ${defender.primarySkillType.nameKr})',
+        );
       }
 
       // 스킬 효과 처리
@@ -568,21 +606,34 @@ class BattleEngine {
       );
 
       // 쿨다운 설정
-      attackerState.skillCooldowns[skill.name] = math.max(1, skill.cooldownTurns);
+      attackerState.skillCooldowns[skill.name] = math.max(
+        1,
+        skill.cooldownTurns,
+      );
       logs.add('   ${skill.type.emoji} ${attacker.name} 스킬: 【${skill.name}】');
     }
 
     // 원소 상성 (새 배율)
-    final elemMultiplier = _calculateElementMultiplier(atkElement, defender.element);
+    final elemMultiplier = _calculateElementMultiplier(
+      atkElement,
+      defender.element,
+    );
     if (elemMultiplier > 1.0) {
-      logs.add('   ${atkElement.emoji} 원소 유리! (${atkElement.nameKr} → ${defender.element.nameKr})');
+      logs.add(
+        '   ${atkElement.emoji} 원소 유리! (${atkElement.nameKr} → ${defender.element.nameKr})',
+      );
     } else if (elemMultiplier < 1.0) {
-      logs.add('   ${defender.element.emoji} 원소 불리 (${atkElement.nameKr} → ${defender.element.nameKr})');
+      logs.add(
+        '   ${defender.element.emoji} 원소 불리 (${atkElement.nameKr} → ${defender.element.nameKr})',
+      );
     }
 
     // 치명타 판정 (등급별 보너스 적용)
     final critGradeBonus = _getCritBonus(attacker.grade);
-    double critChance = baseCritChance + critGradeBonus + (attacker.swordLevel * levelCritBonus);
+    double critChance =
+        baseCritChance +
+        critGradeBonus +
+        (attacker.swordLevel * levelCritBonus);
     critChance += attackerState.critBonus;
     critChance = critChance.clamp(0.05, 0.35);
     final isCrit = rng.nextDouble() < critChance;
@@ -595,12 +646,19 @@ class BattleEngine {
     dmgMultiplier *= underdogBonus;
 
     final baseDamage = 50 + (attacker.power * 0.14).round();
-    int damage = calculateDamage(baseDamage, multiplier: dmgMultiplier * elemMultiplier) + bonusFlat;
+    int damage =
+        calculateDamage(
+          baseDamage,
+          multiplier: dmgMultiplier * elemMultiplier,
+        ) +
+        bonusFlat;
 
     // 가드 적용 (새 감소율)
     if (guarded && !pierceGuard) {
       damage = (damage * guardDamageReduction).round();
-      logs.add('   🛡️ ${defender.name} 가드! 피해 ${((1 - guardDamageReduction) * 100).round()}% 감소');
+      logs.add(
+        '   🛡️ ${defender.name} 가드! 피해 ${((1 - guardDamageReduction) * 100).round()}% 감소',
+      );
     } else if (guarded && pierceGuard) {
       logs.add('   📌 관통! ${defender.name}의 가드를 무시!');
     }
@@ -611,7 +669,9 @@ class BattleEngine {
       defenderState.shield -= absorbed;
       damage -= absorbed;
       if (absorbed > 0) {
-        logs.add('   🔮 방어막이 $absorbed 피해 흡수! (남은 방어막: ${defenderState.shield})');
+        logs.add(
+          '   🔮 방어막이 $absorbed 피해 흡수! (남은 방어막: ${defenderState.shield})',
+        );
       }
     }
 
@@ -626,12 +686,17 @@ class BattleEngine {
     // 최종 피해 적용
     damage = math.max(1, damage);
     defenderState.hp = math.max(0, defenderState.hp - damage);
-    logs.add('   ⚔️ ${attacker.name} → ${defender.name}: ${formatNumber(damage)} 피해');
+    logs.add(
+      '   ⚔️ ${attacker.name} → ${defender.name}: ${formatNumber(damage)} 피해',
+    );
 
     // 흡혈 처리
     if (lifestealPercent > 0 && damage > 0) {
       final stolen = (damage * lifestealPercent / 100.0).round();
-      final actualHeal = math.min(stolen, attackerState.maxHp - attackerState.hp);
+      final actualHeal = math.min(
+        stolen,
+        attackerState.maxHp - attackerState.hp,
+      );
       if (actualHeal > 0) {
         attackerState.hp += actualHeal;
         logs.add('   🩸 흡혈! ${attacker.name} HP +$actualHeal');
@@ -640,7 +705,10 @@ class BattleEngine {
 
     // 즉시 회복 처리
     if (healAmount > 0) {
-      final actualHeal = math.min(healAmount, attackerState.maxHp - attackerState.hp);
+      final actualHeal = math.min(
+        healAmount,
+        attackerState.maxHp - attackerState.hp,
+      );
       if (actualHeal > 0) {
         attackerState.hp += actualHeal;
         logs.add('   💖 회복! ${attacker.name} HP +$actualHeal');
@@ -649,11 +717,15 @@ class BattleEngine {
 
     // 반격 처리
     if (defenderState.hp > 0) {
-      final counterChance = guarded ? counterChanceGuarded : counterChanceNormal;
+      final counterChance = guarded
+          ? counterChanceGuarded
+          : counterChanceNormal;
       if (rng.nextDouble() < counterChance) {
         final counterDmg = math.max(8, (defender.power * 0.08).round());
         attackerState.hp = math.max(0, attackerState.hp - counterDmg);
-        logs.add('   ↩️ ${defender.name} 반격! ${attacker.name}에게 $counterDmg 피해');
+        logs.add(
+          '   ↩️ ${defender.name} 반격! ${attacker.name}에게 $counterDmg 피해',
+        );
       }
     }
 
@@ -661,7 +733,10 @@ class BattleEngine {
   }
 
   /// 원소 상성 배율 계산 (새 배율)
-  static double _calculateElementMultiplier(GameElement attacker, GameElement defender) {
+  static double _calculateElementMultiplier(
+    GameElement attacker,
+    GameElement defender,
+  ) {
     // 불 > 자연 > 물 > 불, 빛 <-> 암흑
     const strongAgainst = {
       GameElement.fire: GameElement.nature,
@@ -670,7 +745,7 @@ class BattleEngine {
       GameElement.light: GameElement.dark,
       GameElement.dark: GameElement.light,
     };
-    
+
     if (strongAgainst[attacker] == defender) {
       return elementAdvantage;
     }
@@ -719,11 +794,9 @@ class BattleEngine {
 
       case SkillEffect.bleed:
         final dotDamage = math.max(8, skill.value);
-        defenderState.dots.add(_TickEffect(
-          name: '출혈',
-          damageOrHeal: dotDamage,
-          remainingTurns: 3,
-        ));
+        defenderState.dots.add(
+          _TickEffect(name: '출혈', damageOrHeal: dotDamage, remainingTurns: 3),
+        );
         logs.add('   🩸 출혈 부여! ($dotDamage 피해 × 3턴)');
         break;
 
@@ -746,11 +819,9 @@ class BattleEngine {
 
       case SkillEffect.regen:
         final hotAmount = math.max(12, skill.value);
-        attackerState.hots.add(_TickEffect(
-          name: '재생',
-          damageOrHeal: hotAmount,
-          remainingTurns: 3,
-        ));
+        attackerState.hots.add(
+          _TickEffect(name: '재생', damageOrHeal: hotAmount, remainingTurns: 3),
+        );
         logs.add('   💚 재생 버프! ($hotAmount 회복 × 3턴)');
         break;
 

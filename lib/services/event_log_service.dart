@@ -9,8 +9,9 @@ class EventLogService {
   EventLogService._internal();
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseFunctions _functions =
-      FirebaseFunctions.instanceFor(region: 'asia-northeast3');
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
+    region: 'asia-northeast3',
+  );
 
   String _platformLabel() {
     if (kIsWeb) return 'web';
@@ -44,7 +45,9 @@ class EventLogService {
     final uid = AuthService().uid;
     if (uid == null || uid.isEmpty) return;
 
-    final expiresAt = Timestamp.fromDate(DateTime.now().add(const Duration(days: 30)));
+    final expiresAt = Timestamp.fromDate(
+      DateTime.now().add(const Duration(days: 30)),
+    );
 
     final payload = {
       'event': 'snapshot',
@@ -107,7 +110,9 @@ class EventLogService {
     final uid = AuthService().uid;
     if (uid == null || uid.isEmpty) return;
 
-    final expiresAt = Timestamp.fromDate(DateTime.now().add(const Duration(days: 30)));
+    final expiresAt = Timestamp.fromDate(
+      DateTime.now().add(const Duration(days: 30)),
+    );
 
     final payload = {
       'productId': productId,

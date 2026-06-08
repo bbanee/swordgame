@@ -6,7 +6,7 @@ class BattleRecord {
   final int opponentLevel;
   final String myGrade;
   final String opponentGrade;
-  final String opponentElement;  // ✅ 상대 속성 추가
+  final String opponentElement; // ✅ 상대 속성 추가
   final bool opponentIsNpc;
   final bool isWin;
   final DateTime timestamp;
@@ -14,7 +14,7 @@ class BattleRecord {
   final bool isRevengeable;
   final List<String> logs;
   final bool isAttacker;
-  
+
   BattleRecord({
     required this.uid,
     required this.opponentId,
@@ -23,7 +23,7 @@ class BattleRecord {
     required this.opponentLevel,
     required this.myGrade,
     required this.opponentGrade,
-    this.opponentElement = 'fire',  // ✅ 기본값
+    this.opponentElement = 'fire', // ✅ 기본값
     required this.opponentIsNpc,
     required this.isWin,
     required this.timestamp,
@@ -32,7 +32,7 @@ class BattleRecord {
     this.logs = const [],
     this.isAttacker = true,
   });
-  
+
   // 경과 시간 표시
   String get timeAgo {
     final diff = DateTime.now().difference(timestamp);
@@ -41,7 +41,7 @@ class BattleRecord {
     if (diff.inHours < 24) return '${diff.inHours}시간 전';
     return '${diff.inDays}일 전';
   }
-  
+
   Map<String, dynamic> toJson() => {
     'uid': uid,
     'opponentId': opponentId,
@@ -59,12 +59,14 @@ class BattleRecord {
     'logs': logs,
     'isAttacker': isAttacker,
   };
-  
+
   // ✅ 안전한 fromJson
   factory BattleRecord.fromJson(Map<String, dynamic> json) {
     try {
       return BattleRecord(
-        uid: (json['uid'] as String?) ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        uid:
+            (json['uid'] as String?) ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
         opponentId: (json['opponentId'] as String?) ?? 'unknown',
         opponentName: (json['opponentName'] as String?) ?? '알 수 없음',
         myLevel: (json['myLevel'] as int?) ?? 0,
@@ -99,7 +101,7 @@ class BattleRecord {
       );
     }
   }
-  
+
   // ✅ 타임스탬프 안전 파싱
   static DateTime _parseTimestamp(dynamic value) {
     if (value == null) return DateTime.now();
@@ -109,16 +111,19 @@ class BattleRecord {
     }
     return DateTime.now();
   }
-  
+
   // ✅ 로그 안전 파싱
   static List<String> _parseLogs(dynamic value) {
     if (value == null) return const [];
     if (value is List) {
-      return value.map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+      return value
+          .map((e) => e?.toString() ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
     }
     return const [];
   }
-  
+
   // ✅ 유효성 검사
   bool get isValid => uid.isNotEmpty && opponentId.isNotEmpty;
 }

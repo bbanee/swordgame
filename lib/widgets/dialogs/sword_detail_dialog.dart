@@ -1,19 +1,25 @@
-// lib/widgets/dialogs/sword_detail_dialog.dart
-// 검 클릭 시 상세 정보를 보여주는 다이얼로그
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../enums/element.dart';
+import '../../enums/skill_effect.dart';
+import '../../enums/skill_type.dart';
+import '../../enums/sword_grade.dart';
 import '../../models/owned_sword.dart';
 import '../../models/sword_data.dart';
-import '../../enums/sword_grade.dart';
-import '../../enums/element.dart';
-import '../../enums/skill_type.dart';
-import '../../enums/skill_effect.dart';
-import '../sword_image_widget.dart'; // 🔥 추가
+import '../../utils/helpers.dart';
+import '../sword_image_widget.dart';
 
 class SwordDetailDialog extends StatelessWidget {
+  static const _baseAsset =
+      'assets/images/home/season1_sword_detail_scene_body_v1.png';
+  static const _baseWidth = 941.0;
+  static const _baseHeight = 1671.0;
+
   final OwnedSword sword;
   final bool isEquipped;
-  final bool canSell; // ✅ 판매 가능 여부 (검 1개면 false)
+  final bool canSell;
   final VoidCallback? onEquip;
   final VoidCallback? onSell;
 
@@ -21,246 +27,153 @@ class SwordDetailDialog extends StatelessWidget {
     super.key,
     required this.sword,
     this.isEquipped = false,
-    this.canSell = true, // ✅ 기본값 true
+    this.canSell = true,
     this.onEquip,
     this.onSell,
   });
 
   @override
   Widget build(BuildContext context) {
-    final grade = sword.data.grade;
-    final element = sword.data.element;
-    final skills = sword.data.skills;
+    return Dialog.fullscreen(
+      backgroundColor: Colors.black,
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final layout = _SwordDetailLayout(
+              constraints.maxWidth,
+              constraints.maxHeight,
+            );
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 340),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1a1a2e),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: grade.color, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: grade.color.withOpacity(0.3),
-              blurRadius: 20,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 상단 헤더 (검 이미지 & 기본 정보)
-              _buildHeader(grade, element),
-
-              // 스탯 정보
-              _buildStats(),
-
-              // 스킬 정보
-              if (skills.isNotEmpty) _buildSkills(skills),
-
-              // 하단 버튼
-              _buildButtons(context),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(SwordGrade grade, GameElement element) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [grade.color.withOpacity(0.3), grade.color.withOpacity(0.1)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      child: Column(
-        children: [
-          // 장착 중 표시
-          if (isEquipped)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.amber),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
+            return ClipRect(
+              child: Stack(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.amber, size: 14),
-                  SizedBox(width: 4),
-                  Text(
-                    '장착 중',
-                    style: TextStyle(
-                      color: Colors.amber,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                  Positioned.fill(
+                    child: Image.asset(
+                      _baseAsset,
+                      fit: BoxFit.fill,
+                      filterQuality: FilterQuality.high,
                     ),
                   ),
+                  ..._buildOverlays(context, layout),
                 ],
               ),
-            ),
-
-          // 검 이미지 (SwordImageWidget)
-          SwordImageWidget(
-            grade: grade,
-            element: element,
-            level: sword.level,
-            breakthroughLevel: sword.breakthroughLevel,
-            size: 120,
-            showPulse: true,
-          ),
-          const SizedBox(height: 12),
-
-          // 등급 배지
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: grade.color.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: grade.color.withOpacity(0.5)),
-            ),
-            child: Text(
-              grade.displayName,
-              style: TextStyle(
-                color: grade.color,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // 검 이름
-          Text(
-            sword.data.name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          // 강화 레벨
-          Text(
-            '+${sword.level}',
-            style: TextStyle(
-              color: Colors.amber,
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-              shadows: [
-                Shadow(color: Colors.amber.withOpacity(0.5), blurRadius: 10),
-              ],
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildStats() {
-    // 강화 보너스 계산
+  List<Widget> _buildOverlays(BuildContext context, _SwordDetailLayout layout) {
+    return [
+      _box(
+        layout,
+        _SwordDetailRects.title,
+        _fitText(layout, '검 상세', 44, fontWeight: FontWeight.w900),
+      ),
+      _tap(layout, _SwordDetailRects.close, () => Navigator.pop(context)),
+      _box(layout, _SwordDetailRects.sword, _swordArt(layout)),
+      _box(
+        layout,
+        _SwordDetailRects.name,
+        _fitText(
+          layout,
+          '${sword.data.name} +${sword.level}',
+          30,
+          color: sword.data.grade.color,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      for (var i = 0; i < _statRows.length; i++)
+        _box(
+          layout,
+          _SwordDetailRects.stats[i],
+          _statText(layout, _statRows[i]),
+        ),
+      for (var i = 0; i < _skillRows.length; i++)
+        _box(layout, _SwordDetailRects.skills[i], _skillText(layout, i)),
+      _box(
+        layout,
+        _SwordDetailRects.sellButton,
+        _buttonText(layout, _sellLabel),
+      ),
+      _box(
+        layout,
+        _SwordDetailRects.equipButton,
+        _buttonText(layout, isEquipped ? '장착 중' : '장착하기'),
+      ),
+      _box(layout, _SwordDetailRects.closeButton, _buttonText(layout, '닫기')),
+      _tap(
+        layout,
+        _SwordDetailRects.sellButton,
+        onSell == null || !canSell
+            ? null
+            : () {
+                Navigator.pop(context);
+                onSell?.call();
+              },
+      ),
+      _tap(
+        layout,
+        _SwordDetailRects.equipButton,
+        isEquipped || onEquip == null
+            ? null
+            : () {
+                Navigator.pop(context);
+                onEquip?.call();
+              },
+      ),
+      _tap(layout, _SwordDetailRects.closeButton, () => Navigator.pop(context)),
+    ];
+  }
+
+  List<(String, String, Color)> get _statRows {
     final enhanceBonus = sword.level * sword.powerPerLevel;
+    return [
+      ('등급', sword.data.grade.displayName, sword.data.grade.color),
+      ('속성', sword.data.element.nameKr, sword.data.element.color),
+      ('전투력', formatNumber(sword.totalPower), const Color(0xFFFFD86B)),
+      ('기본공격력', formatNumber(sword.data.baseAtk), Colors.white),
+      ('강화수치', '+${sword.level} / 보너스 +$enhanceBonus', Colors.white),
+      ('돌파', '+${sword.breakthroughLevel}', Colors.white),
+    ];
+  }
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // 속성 & 전투력
-          Row(
-            children: [
-              // 속성
-              Expanded(
-                child: _statBox(
-                  icon: sword.data.element.emoji,
-                  label: '속성',
-                  value: sword.data.element.nameKr,
-                  color: Colors.cyan,
-                ),
-              ),
-              const SizedBox(width: 12),
-              // 전투력
-              Expanded(
-                child: _statBox(
-                  icon: '⚡',
-                  label: '전투력',
-                  value: '${sword.totalPower}',
-                  color: Colors.amber,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+  List<SkillData> get _skillRows => sword.data.skills.take(5).toList();
 
-          // 기본 공격력 & 강화 보너스
-          Row(
-            children: [
-              Expanded(
-                child: _statBox(
-                  icon: '🗡️',
-                  label: '기본 공격력',
-                  value: '${sword.data.baseAtk}',
-                  color: Colors.red,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _statBox(
-                  icon: '✨',
-                  label: '강화 보너스',
-                  value: '+$enhanceBonus',
-                  color: Colors.purple,
-                ),
-              ),
-            ],
-          ),
-        ],
+  String get _sellLabel =>
+      canSell ? '판매 ${formatGold(sword.sellPrice)}G' : '판매 불가';
+
+  Widget _swordArt(_SwordDetailLayout layout) {
+    return Center(
+      child: SwordImageWidget(
+        grade: sword.data.grade,
+        element: sword.data.element,
+        swordId: sword.data.id,
+        level: sword.level,
+        breakthroughLevel: sword.breakthroughLevel,
+        size: layout.u(360),
+        showPulse: true,
       ),
     );
   }
 
-  Widget _statBox({
-    required String icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
+  Widget _statText(_SwordDetailLayout layout, (String, String, Color) row) {
+    return Padding(
+      padding: EdgeInsets.only(left: layout.u(98), right: layout.u(16)),
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(icon, style: const TextStyle(fontSize: 16)),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(color: color.withOpacity(0.8), fontSize: 11),
-              ),
-            ],
+          SizedBox(
+            width: layout.u(112),
+            child: _plainText(layout, row.$1, 17, color: Colors.white70),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          Expanded(
+            child: _plainText(
+              layout,
+              row.$2,
+              20,
+              color: row.$3,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],
@@ -268,105 +181,40 @@ class SwordDetailDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildSkills(List<SkillData> skills) {
+  Widget _skillText(_SwordDetailLayout layout, int index) {
+    if (index >= _skillRows.length) {
+      return Center(
+        child: _fitText(layout, '스킬 없음', 18, color: Colors.white38),
+      );
+    }
+    final skill = _skillRows[index];
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.only(left: layout.u(100), right: layout.u(20)),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.auto_awesome, color: Colors.purple, size: 18),
-              SizedBox(width: 6),
-              Text(
-                '스킬',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          _plainText(
+            layout,
+            '${skill.name}  ${skill.procRate}%',
+            17,
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
           ),
-          const SizedBox(height: 8),
-
-          // 스킬 리스트
-          ...skills.map((skill) => _buildSkillItem(skill)),
-
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSkillItem(SkillData skill) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.purple.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.purple.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 스킬명 & 타입
-          Row(
-            children: [
-              Text(skill.type.emoji, style: const TextStyle(fontSize: 18)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      skill.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Text(
-                      '${skill.type.nameKr} · ${skill.effect.nameKr}',
-                      style: TextStyle(color: Colors.purple[200], fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-              // 발동 확률
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${skill.procRate}%',
-                  style: const TextStyle(
-                    color: Colors.amber,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // 스킬 설명
-          Text(
+          SizedBox(height: layout.u(4)),
+          _plainText(
+            layout,
             _getSkillDescription(skill),
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 12,
-              height: 1.4,
-            ),
+            13,
+            color: Colors.white70,
           ),
         ],
       ),
     );
+  }
+
+  Widget _buttonText(_SwordDetailLayout layout, String text) {
+    return _fitText(layout, text, 25, fontWeight: FontWeight.w900);
   }
 
   String _getSkillDescription(SkillData skill) {
@@ -402,71 +250,132 @@ class SwordDetailDialog extends StatelessWidget {
     }
   }
 
-  Widget _buildButtons(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          // ✅ 판매 버튼 (장착 중이어도 판매 가능, 단 1개면 불가)
-          if (onSell != null)
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: canSell
-                    ? () {
-                        Navigator.pop(context);
-                        onSell?.call();
-                      }
-                    : null,
-                icon: const Icon(Icons.sell, size: 18),
-                label: Text(
-                  canSell
-                      ? '판매 (${_formatGold(sword.data.getSellPrice(sword.level))}G)'
-                      : '판매 불가 (1개)',
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: canSell ? Colors.orange : Colors.grey,
-                  side: BorderSide(
-                    color: canSell ? Colors.orange : Colors.grey,
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-
-          if (onSell != null) const SizedBox(width: 8),
-
-          // 장착 버튼
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: isEquipped
-                  ? null
-                  : () {
-                      Navigator.pop(context);
-                      onEquip?.call();
-                    },
-              icon: Icon(
-                isEquipped ? Icons.check : Icons.add_circle_outline,
-                size: 18,
-              ),
-              label: Text(isEquipped ? '장착 중' : '장착하기'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isEquipped ? Colors.grey : Colors.indigo,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
+  Widget _plainText(
+    _SwordDetailLayout layout,
+    String text,
+    double baseSize, {
+    Color color = Colors.white,
+    FontWeight fontWeight = FontWeight.w800,
+  }) {
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: color,
+        fontSize: layout.u(baseSize),
+        fontWeight: fontWeight,
+        shadows: const [
+          Shadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
     );
   }
 
-  String _formatGold(int gold) {
-    if (gold >= 10000) {
-      return '${(gold / 10000).toStringAsFixed(1)}만';
-    } else if (gold >= 1000) {
-      return '${(gold / 1000).toStringAsFixed(1)}천';
-    }
-    return '$gold';
+  Widget _fitText(
+    _SwordDetailLayout layout,
+    String text,
+    double baseSize, {
+    Color color = Colors.white,
+    FontWeight fontWeight = FontWeight.w700,
+  }) {
+    final fontSize = layout.u(baseSize);
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: layout.u(5)),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
+          child: Text(
+            text,
+            maxLines: 1,
+            softWrap: false,
+            textAlign: TextAlign.center,
+            textHeightBehavior: const TextHeightBehavior(
+              applyHeightToFirstAscent: false,
+              applyHeightToLastDescent: false,
+            ),
+            strutStyle: StrutStyle(
+              fontSize: fontSize,
+              height: 1,
+              forceStrutHeight: true,
+            ),
+            style: TextStyle(
+              color: color,
+              fontSize: fontSize,
+              fontWeight: fontWeight,
+              height: 1,
+              shadows: const [
+                Shadow(
+                  color: Colors.black,
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
+
+  Widget _box(_SwordDetailLayout layout, Rect rect, Widget child) {
+    return Positioned.fromRect(rect: layout.r(rect), child: child);
+  }
+
+  Widget _tap(_SwordDetailLayout layout, Rect rect, VoidCallback? onTap) {
+    return _box(
+      layout,
+      rect,
+      GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: onTap,
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+class _SwordDetailLayout {
+  final double width;
+  final double height;
+  late final double sx = width / SwordDetailDialog._baseWidth;
+  late final double sy = height / SwordDetailDialog._baseHeight;
+  late final double s = math.min(sx, sy);
+
+  _SwordDetailLayout(this.width, this.height);
+
+  double u(double value) => value * s;
+
+  Rect r(Rect rect) => Rect.fromLTWH(
+    rect.left * sx,
+    rect.top * sy,
+    rect.width * sx,
+    rect.height * sy,
+  );
+}
+
+class _SwordDetailRects {
+  static const close = Rect.fromLTWH(23, 27, 100, 100);
+  static const title = Rect.fromLTWH(205, 67, 535, 120);
+  static const sword = Rect.fromLTWH(193, 233, 552, 500);
+  static const name = Rect.fromLTWH(160, 779, 620, 69);
+  static const stats = [
+    Rect.fromLTWH(34, 916, 380, 60),
+    Rect.fromLTWH(34, 1002, 380, 60),
+    Rect.fromLTWH(34, 1092, 380, 60),
+    Rect.fromLTWH(34, 1182, 380, 60),
+    Rect.fromLTWH(34, 1272, 380, 60),
+    Rect.fromLTWH(34, 1360, 380, 60),
+  ];
+  static const skills = [
+    Rect.fromLTWH(446, 937, 448, 72),
+    Rect.fromLTWH(446, 1046, 448, 72),
+    Rect.fromLTWH(446, 1154, 448, 72),
+    Rect.fromLTWH(446, 1262, 448, 72),
+    Rect.fromLTWH(446, 1370, 448, 72),
+  ];
+  static const sellButton = Rect.fromLTWH(45, 1504, 260, 86);
+  static const equipButton = Rect.fromLTWH(326, 1504, 290, 86);
+  static const closeButton = Rect.fromLTWH(637, 1504, 260, 86);
 }

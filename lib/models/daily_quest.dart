@@ -12,7 +12,7 @@ class DailyQuest {
   final int rewardSeasonExp;
   int progress;
   bool claimed;
-  
+
   DailyQuest({
     required this.id,
     required this.name,
@@ -26,13 +26,13 @@ class DailyQuest {
     this.progress = 0,
     this.claimed = false,
   });
-  
+
   bool get isCompleted => progress >= target;
-  
+
   double get progressRatio => (progress / target).clamp(0.0, 1.0);
-  
+
   String get progressText => '$progress/$target';
-  
+
   // ✅ 보상 요약 텍스트
   String get rewardText {
     final rewards = <String>[];
@@ -42,10 +42,10 @@ class DailyQuest {
     if (rewardSeasonExp > 0) rewards.add('${rewardSeasonExp}EXP');
     return rewards.join(' + ');
   }
-  
+
   // ✅ 보상이 있는지 확인
   bool get hasReward => rewardGold > 0 || rewardDiamond > 0 || rewardStone > 0;
-  
+
   DailyQuest copyWith({int? progress, bool? claimed}) {
     return DailyQuest(
       id: id,
@@ -61,7 +61,7 @@ class DailyQuest {
       claimed: claimed ?? this.claimed,
     );
   }
-  
+
   // ✅ JSON 직렬화
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -76,7 +76,7 @@ class DailyQuest {
     'progress': progress,
     'claimed': claimed,
   };
-  
+
   // ✅ JSON에서 복원
   factory DailyQuest.fromJson(Map<String, dynamic> json) {
     return DailyQuest(

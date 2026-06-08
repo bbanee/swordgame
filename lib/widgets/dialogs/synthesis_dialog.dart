@@ -1,21 +1,29 @@
-// lib/widgets/dialogs/synthesis_dialog.dart
-// 합성 다이얼로그 - 인벤토리 그리드에서 체크박스로 선택
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../data/swords.dart';
 import '../../enums/sword_grade.dart';
-import '../../enums/element.dart';  // ✅ 추가
 import '../../models/owned_sword.dart';
+import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../sword_image_widget.dart';
 
 class SynthesisDialog extends StatefulWidget {
+  static const _baseAsset =
+      'assets/images/home/season1_synthesis_scene_body_v1.png';
+  static const _itemFrameAsset =
+      'assets/images/home/season1_inventory_item_frame_v1.png';
+  static const _baseWidth = 941.0;
+  static const _baseHeight = 1672.0;
+
   final List<OwnedSword> inventory;
-  final String? equippedSwordUid;  // 장착 중인 검 제외용
+  final String? equippedSwordUid;
   final int normalToRarePity;
   final int rareToUniquePity;
   final int uniqueToLegendPity;
-  // 🔥 콜백이 새 pity 값을 반환하도록 변경
-  final Map<String, int> Function(List<OwnedSword> materials, {bool showResult}) onSynthesize;
+  final Map<String, int> Function(List<OwnedSword> materials, {bool showResult})
+  onSynthesize;
 
   const SynthesisDialog({
     super.key,
@@ -32,22 +40,17 @@ class SynthesisDialog extends StatefulWidget {
 }
 
 class _SynthesisDialogState extends State<SynthesisDialog> {
-  final Set<String> _selectedUids = {};  // 선택된 검들의 uid
-  SwordGrade? _filterGrade;  // 등급 필터 (null = 전체)
-  bool _autoSynthesize = false; // 자동 합성 체크
-  
-  // 🔥 pity 값을 state로 관리
+  final Set<String> _selectedUids = {};
+  SwordGrade _filterGrade = synthesisTable.first.$1;
+
   late int _normalToRarePity;
   late int _rareToUniquePity;
   late int _uniqueToLegendPity;
 
-  // 합성 가능한 등급 (노말, 레어, 유니크만)
-  static const _synthesizableGrades = [
-    SwordGrade.normal,
-    SwordGrade.rare,
-    SwordGrade.unique,
-  ];
-  
+  static final List<SwordGrade> _synthesizableGrades = synthesisTable
+      .map((entry) => entry.$1)
+      .toList(growable: false);
+
   @override
   void initState() {
     super.initState();
@@ -56,857 +59,562 @@ class _SynthesisDialogState extends State<SynthesisDialog> {
     _uniqueToLegendPity = widget.uniqueToLegendPity;
   }
 
-  // 선택된 검 리스트
-  List<OwnedSword> get _selectedSwords {
-    return widget.inventory
-        .where((s) => _selectedUids.contains(s.uid))
-        .toList();
-  }
+  List<OwnedSword> get _selectedSwords =>
+      widget.inventory.where((s) => _selectedUids.contains(s.uid)).toList();
 
-  // 선택된 검들이 같은 등급인지
-  bool get _isSameGrade {
-    if (_selectedSwords.isEmpty) return true;
-    final firstGrade = _selectedSwords.first.data.grade;
-    return _selectedSwords.every((s) => s.data.grade == firstGrade);
-  }
-
-  // 합성 가능 여부
-  bool get _canSynthesize {
-    return _selectedSwords.length == 3 && 
-           _isSameGrade && 
-           _synthesizableGrades.contains(_selectedSwords.first.data.grade);
-  }
-
-  bool get _canAutoSynthesize {
-    final list = widget.inventory
-        .where((s) => _synthesizableGrades.contains(s.data.grade))
-        .where((s) => s.uid != widget.equippedSwordUid)
-        .toList();
-    for (final grade in _synthesizableGrades) {
-      final count = list.where((s) => s.data.grade == grade).length;
-      if (count >= 3) return true;
-    }
-    return false;
-  }
-
-  // 필터링된 인벤토리 (✅ 장착 검도 포함)
   List<OwnedSword> get _filteredInventory {
-    var list = widget.inventory
-        .where((s) => _synthesizableGrades.contains(s.data.grade))  // 합성 가능 등급만
+    final list = widget.inventory
+        .where((s) => s.data.grade == _filterGrade)
         .toList();
-    
-    if (_filterGrade != null) {
-      list = list.where((s) => s.data.grade == _filterGrade).toList();
-    }
-    
-    // 등급순 정렬 (높은 등급 먼저)
-    list.sort((a, b) => b.data.grade.index.compareTo(a.data.grade.index));
+    list.sort((a, b) {
+      final level = b.level.compareTo(a.level);
+      if (level != 0) return level;
+      return b.data.baseAtk.compareTo(a.data.baseAtk);
+    });
     return list;
   }
 
+  bool get _isSameGrade {
+    if (_selectedSwords.isEmpty) return true;
+    final grade = _selectedSwords.first.data.grade;
+    return _selectedSwords.every((s) => s.data.grade == grade);
+  }
+
+  bool get _canSynthesize =>
+      _selectedSwords.length == AppConstants.synthesisRequiredCount &&
+      _isSameGrade &&
+      canSynthesize(_selectedSwords.first.data.grade);
+
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: const Color(0xFF1a1a2e),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 400,
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 헤더 (축소)
-            _buildHeader(),
-            
-            // 천장 정보 (축소)
-            _buildPityInfo(),
-            
-            // 등급 필터
-            _buildGradeFilter(),
-            
-            // 인벤토리 그리드
-            Expanded(child: _buildInventoryGrid()),
-            
-            // 선택 현황 & 합성 버튼
-            _buildFooter(),
-          ],
-        ),
-      ),
-    );
-  }
+    return Dialog.fullscreen(
+      backgroundColor: Colors.black,
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final layout = _SynthesisLayout(
+              constraints.maxWidth,
+              constraints.maxHeight,
+            );
 
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.purple.withOpacity(0.2),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      child: Column(
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('🔄', style: TextStyle(fontSize: 22)),
-              SizedBox(width: 6),
-              Text(
-                '검 합성',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '같은 등급 검 3개를 선택하세요 (히든/불멸 불가)',
-            style: TextStyle(color: Colors.grey[400], fontSize: 11),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPityInfo() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.amber.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          // 천장 진행도
-          Row(
-            children: [
-              const Text('🎯', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _buildPityBarCompact('노말', _normalToRarePity, 10, Colors.blue),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildPityBarCompact('레어', _rareToUniquePity, 50, Colors.purple),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildPityBarCompact('유니크', _uniqueToLegendPity, 100, Colors.orange),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          // 승급 확률 표시
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              children: [
-                const Text('📊', style: TextStyle(fontSize: 11)),
-                const SizedBox(width: 4),
-                ...[SwordGrade.normal, SwordGrade.rare, SwordGrade.unique].map((g) {
-                  final prob = getSynthesisProbability(g) ?? 0;
-                  final resultGrade = getSynthesisResultGrade(g);
-                  return Expanded(
-                    child: Text(
-                      '${g.displayName}→${resultGrade?.displayName ?? '?'} ${prob}%',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: resultGrade?.color ?? Colors.white54,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w500,
-                      ),
+            return ClipRect(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Image.asset(
+                      SynthesisDialog._baseAsset,
+                      fit: BoxFit.fill,
+                      filterQuality: FilterQuality.high,
                     ),
-                  );
-                }),
-              ],
-            ),
+                  ),
+                  ..._buildDataOverlays(layout),
+                  ..._buildTapOverlays(layout),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildDataOverlays(_SynthesisLayout layout) {
+    return [
+      _box(
+        layout,
+        _SynthesisRects.title,
+        _fitText(
+          layout,
+          '\uAC80 \uD569\uC131',
+          46,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      for (var i = 0; i < _synthesizableGrades.length; i++)
+        _box(
+          layout,
+          _SynthesisRects.gradeTabs[i],
+          _gradeTab(layout, _synthesizableGrades[i]),
+        ),
+      for (var i = 0; i < _synthesizableGrades.length; i++)
+        _box(
+          layout,
+          _SynthesisRects.rateSlots[i],
+          _rateSlot(layout, _synthesizableGrades[i]),
+        ),
+      _box(layout, _SynthesisRects.grid, _inventoryGrid(layout)),
+      for (var i = 0; i < AppConstants.synthesisRequiredCount; i++)
+        _box(
+          layout,
+          _SynthesisRects.materialSlots[i],
+          _materialSlot(layout, i),
+        ),
+      _box(layout, _SynthesisRects.button, _synthesisButtonLabel(layout)),
+    ];
+  }
+
+  List<Widget> _buildTapOverlays(_SynthesisLayout layout) {
+    return [
+      _tap(layout, _SynthesisRects.close, () => Navigator.pop(context)),
+      for (var i = 0; i < _synthesizableGrades.length; i++)
+        _tap(
+          layout,
+          _SynthesisRects.gradeTabs[i],
+          () => setState(() {
+            _filterGrade = _synthesizableGrades[i];
+            _selectedUids.clear();
+          }),
+        ),
+      _tap(layout, _SynthesisRects.button, _canSynthesize ? _synthesize : null),
+    ];
+  }
+
+  Widget _gradeTab(_SynthesisLayout layout, SwordGrade grade) {
+    final count = widget.inventory.where((s) => s.data.grade == grade).length;
+    final selected = grade == _filterGrade;
+    return SizedBox.expand(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _fitText(
+            layout,
+            grade.displayName,
+            21,
+            color: selected ? const Color(0xFFFFD86B) : Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
+          SizedBox(height: layout.u(3)),
+          _fitText(
+            layout,
+            '$count',
+            15,
+            color: selected ? Colors.white : Colors.white70,
+            fontWeight: FontWeight.w800,
           ),
         ],
       ),
     );
   }
-  
-  Widget _buildPityBarCompact(String label, int current, int max, Color color) {
-    final progress = current / max;
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 9)),
-        const SizedBox(height: 2),
-        LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Colors.grey[800],
-          valueColor: AlwaysStoppedAnimation<Color>(color),
-          minHeight: 4,
-          borderRadius: BorderRadius.circular(2),
-        ),
-        const SizedBox(height: 2),
-        Text('$current/$max', style: TextStyle(color: color, fontSize: 9)),
-      ],
-    );
-  }
 
-  Widget _buildPityBar(String label, int current, int max, Color color, String reward) {
-    final progress = current / max;
-    final isClose = progress >= 0.8;
-    
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
-        const SizedBox(height: 4),
-        Stack(
-          children: [
-            LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.grey[800],
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '$current/$max',
-              style: TextStyle(
-                color: isClose ? color : Colors.white54,
-                fontSize: 11,
-                fontWeight: isClose ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-            Text(
-              reward,
-              style: TextStyle(color: color.withOpacity(0.7), fontSize: 10),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  Widget _rateSlot(_SynthesisLayout layout, SwordGrade grade) {
+    final resultGrade = getSynthesisResultGrade(grade);
+    final probability = getSynthesisProbability(grade) ?? 0;
+    final ceiling = getSynthesisCeiling(grade);
+    final pity = _pityFor(grade);
+    final label = resultGrade == null
+        ? '-'
+        : '${resultGrade.displayName}\n${_formatProbability(probability)}%';
+    final progress = ceiling != null && pity != null
+        ? '${math.min(pity, ceiling)}/$ceiling'
+        : '\uD655\uB960';
 
-  Widget _buildGradeFilter() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            // 전체 버튼
-            _buildFilterChip(null, '전체'),
-            const SizedBox(width: 8),
-            // 등급별 버튼 (✅ 장착 검도 포함)
-            ..._synthesizableGrades.map((grade) {
-              final count = widget.inventory
-                  .where((s) => s.data.grade == grade)
-                  .length;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: _buildFilterChipWithImage(grade, count),
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(SwordGrade? grade, String label) {
-    final isSelected = _filterGrade == grade;
-    final color = grade?.color ?? Colors.grey;
-
-    return FilterChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : color,
-          fontSize: 12,
-        ),
-      ),
-      selected: isSelected,
-      onSelected: (_) {
-        setState(() {
-          _filterGrade = grade;
-          // 필터 변경 시 해당 등급 아닌 선택 해제
-          if (grade != null) {
-            _selectedUids.removeWhere((uid) {
-              final sword = widget.inventory.firstWhere((s) => s.uid == uid);
-              return sword.data.grade != grade;
-            });
-          }
-        });
-      },
-      selectedColor: color.withOpacity(0.3),
-      backgroundColor: const Color(0xFF2a2a4a),
-      side: BorderSide(color: isSelected ? color : Colors.grey[700]!),
-      showCheckmark: false,
-    );
-  }
-
-  // ✅ 이미지가 포함된 필터 칩 (등급별)
-  Widget _buildFilterChipWithImage(SwordGrade grade, int count) {
-    final isSelected = _filterGrade == grade;
-    final color = grade.color;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _filterGrade = grade;
-          // 필터 변경 시 해당 등급 아닌 선택 해제
-          _selectedUids.removeWhere((uid) {
-            final sword = widget.inventory.firstWhere((s) => s.uid == uid);
-            return sword.data.grade != grade;
-          });
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.3) : const Color(0xFF2a2a4a),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isSelected ? color : Colors.grey[700]!),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SwordImageWidget(
-              grade: grade,
-              element: GameElement.fire,  // 기본 속성
-              level: 0,
-              size: 20,
-              showPulse: false,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '$count',
-              style: TextStyle(
-                color: isSelected ? Colors.white : color,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInventoryGrid() {
-    final inventory = _filteredInventory;
-    
-    if (inventory.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey[600]),
-              const SizedBox(height: 12),
-              Text(
-                '합성 가능한 검이 없습니다',
-                style: TextStyle(color: Colors.grey[500]),
-              ),
-            ],
+    return SizedBox.expand(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _fitMultiline(
+            layout,
+            label,
+            13,
+            color: resultGrade?.color ?? Colors.white,
+            fontWeight: FontWeight.w900,
           ),
+          SizedBox(height: layout.u(3)),
+          _fitText(layout, progress, 10, color: Colors.white70),
+        ],
+      ),
+    );
+  }
+
+  Widget _inventoryGrid(_SynthesisLayout layout) {
+    final swords = _filteredInventory;
+    if (swords.isEmpty) {
+      return Center(
+        child: _fitText(
+          layout,
+          '${_filterGrade.displayName} \uB4F1\uAE09 \uAC80\uC774 \uC5C6\uC2B5\uB2C8\uB2E4',
+          27,
+          color: Colors.white70,
         ),
       );
     }
-    
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: GridView.builder(
-        shrinkWrap: true,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 0.75,
-        ),
-        itemCount: inventory.length,
-        itemBuilder: (context, index) {
-          final sword = inventory[index];
-          return _buildSwordItem(sword);
+
+    return GridView.builder(
+      padding: EdgeInsets.fromLTRB(
+        layout.u(34),
+        layout.u(36),
+        layout.u(34),
+        layout.u(36),
+      ),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: layout.u(24),
+        mainAxisSpacing: layout.u(22),
+        mainAxisExtent: layout.u(220),
+      ),
+      itemCount: swords.length,
+      itemBuilder: (_, index) => _inventoryItem(layout, swords[index]),
+    );
+  }
+
+  Widget _inventoryItem(_SynthesisLayout layout, OwnedSword sword) {
+    final selected = _selectedUids.contains(sword.uid);
+    final equipped = sword.uid == widget.equippedSwordUid;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => _toggleSword(sword),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final cellWidth = constraints.maxWidth;
+          final cellHeight = constraints.maxHeight;
+          final nameHeight = layout.u(40);
+          final swordTop = layout.u(15);
+          final swordBottom = nameHeight + layout.u(8);
+          final swordAreaHeight = cellHeight - swordTop - swordBottom;
+          final swordSize = math.min(cellWidth * 0.62, swordAreaHeight * 0.94);
+
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: Image.asset(
+                  SynthesisDialog._itemFrameAsset,
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: swordTop,
+                height: swordAreaHeight,
+                child: Center(
+                  child: SwordImageWidget(
+                    grade: sword.data.grade,
+                    element: sword.data.element,
+                    swordId: sword.data.id,
+                    level: sword.level,
+                    breakthroughLevel: sword.breakthroughLevel,
+                    size: swordSize,
+                    showPulse: false,
+                  ),
+                ),
+              ),
+              if (selected)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: const Color(0xFFFFD86B),
+                        width: layout.u(3),
+                      ),
+                      color: const Color(0xFFFFD86B).withValues(alpha: 0.10),
+                    ),
+                  ),
+                ),
+              if (equipped)
+                Positioned(
+                  top: layout.u(9),
+                  right: layout.u(10),
+                  child: _badge(layout, '\uC7A5\uCC29', Colors.amber),
+                ),
+              Positioned(
+                left: layout.u(12),
+                right: layout.u(12),
+                bottom: 0,
+                height: nameHeight,
+                child: _fitText(
+                  layout,
+                  sword.data.name,
+                  17,
+                  color: sword.data.grade.color,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          );
         },
       ),
     );
   }
 
-  Widget _buildSwordItem(OwnedSword sword) {
-    final isSelected = _selectedUids.contains(sword.uid);
-    final grade = sword.data.grade;
-    final isEquipped = sword.uid == widget.equippedSwordUid;  // ✅ 장착 검 여부
-    
-    // 다른 등급 선택 시 비활성화
-    final bool isDisabled = _selectedSwords.isNotEmpty && 
-                            !isSelected && 
-                            _selectedSwords.first.data.grade != grade;
-    
-    // 3개 선택 완료 시 다른 것 비활성화
-    final bool isFull = _selectedSwords.length >= 3 && !isSelected;
-    
-    final canSelect = !isDisabled && !isFull;
-    
-    return GestureDetector(
-      onTap: canSelect
-          ? () {
-              setState(() {
-                if (isSelected) {
-                  _selectedUids.remove(sword.uid);
-                } else {
-                  _selectedUids.add(sword.uid);
-                }
-              });
-            }
-          : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? grade.color.withOpacity(0.3)
-              : (canSelect ? grade.color.withOpacity(0.1) : Colors.grey.withOpacity(0.1)),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected 
-                ? Colors.amber 
-                : (isEquipped 
-                    ? Colors.cyan  // ✅ 장착 검은 청록색 테두리
-                    : (canSelect ? grade.color.withOpacity(0.5) : Colors.grey[700]!)),
-            width: isSelected || isEquipped ? 2 : 1,
-          ),
-        ),
-        child: Stack(
-          children: [
-            // 메인 컨텐츠
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 🔥 SwordImageWidget 사용
-                  Opacity(
-                    opacity: canSelect ? 1.0 : 0.4,
-                    child: SwordImageWidget(
-                      grade: grade,
-                      element: sword.data.element,
-                      level: sword.level,
-                      size: 32,
-                      showPulse: false,  // ✅ 성능을 위해 펄스 비활성화
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    sword.data.name,
-                    style: TextStyle(
-                      color: canSelect ? Colors.white : Colors.grey,
-                      fontSize: 9,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    '+${sword.level}',
-                    style: TextStyle(
-                      color: canSelect ? Colors.amber : Colors.grey,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+  Widget _materialSlot(_SynthesisLayout layout, int index) {
+    final sword = index < _selectedSwords.length
+        ? _selectedSwords[index]
+        : null;
+    if (sword == null) {
+      return Center(
+        child: _fitText(layout, '${index + 1}', 25, color: Colors.white38),
+      );
+    }
+
+    return SizedBox.expand(
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            top: layout.u(10),
+            height: layout.u(104),
+            child: Center(
+              child: SwordImageWidget(
+                grade: sword.data.grade,
+                element: sword.data.element,
+                swordId: sword.data.id,
+                level: sword.level,
+                breakthroughLevel: sword.breakthroughLevel,
+                size: layout.u(96),
+                showPulse: false,
               ),
             ),
-            
-            // ✅ 장착 검 표시
-            if (isEquipped && !isSelected)
-              Positioned(
-                top: 4,
-                right: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.cyan.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    '장착',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            
-            // 체크 표시
-            if (isSelected)
-              Positioned(
-                top: 4,
-                right: 4,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    color: Colors.amber,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.check, size: 12, color: Colors.black),
-                ),
-              ),
-            
-            // 선택 번호 표시
-            if (isSelected)
-              Positioned(
-                top: 4,
-                left: 4,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    '${_selectedSwords.indexOf(sword) + 1}',
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+          ),
+          Positioned(
+            left: layout.u(8),
+            right: layout.u(8),
+            bottom: layout.u(4),
+            height: layout.u(30),
+            child: _fitText(
+              layout,
+              sword.data.name,
+              14,
+              color: sword.data.grade.color,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildFooter() {
-    final selectedGrade = _selectedSwords.isNotEmpty 
-        ? _selectedSwords.first.data.grade 
-        : null;
-    
-    // 선택된 검의 element (결과 미리보기용)
-    final selectedElement = _selectedSwords.isNotEmpty 
-        ? _selectedSwords.first.data.element 
-        : GameElement.fire;
-    
-    // 결과 등급 (상위 등급)
-    SwordGrade? resultGrade;
-    if (selectedGrade != null) {
-      final gradeIndex = SwordGrade.values.indexOf(selectedGrade);
-      if (gradeIndex < SwordGrade.values.length - 1) {
-        resultGrade = SwordGrade.values[gradeIndex + 1];
-        // 히든은 스킵하고 불멸도 아님
-        if (resultGrade == SwordGrade.hidden) {
-          resultGrade = SwordGrade.legend;
-        }
-      }
-    }
-    
+  Widget _synthesisButtonLabel(_SynthesisLayout layout) {
+    final label = _canSynthesize
+        ? '\uD569\uC131  ${AppConstants.synthesisCostGold}G'
+        : _selectedSwords.isEmpty
+        ? '\uC7AC\uB8CC 3\uAC1C \uC120\uD0DD'
+        : '${_selectedSwords.length}/3 \uC120\uD0DD\uB428';
+    return _fitText(
+      layout,
+      label,
+      32,
+      color: _canSynthesize ? Colors.white : Colors.white70,
+      fontWeight: FontWeight.w900,
+    );
+  }
+
+  Widget _badge(_SynthesisLayout layout, String text, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.symmetric(
+        horizontal: layout.u(5),
+        vertical: layout.u(2),
+      ),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+        color: Colors.black87,
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(layout.u(4)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 선택 현황 (축소)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ...List.generate(3, (i) {
-                final hasSword = i < _selectedSwords.length;
-                final sword = hasSword ? _selectedSwords[i] : null;
-                
-                return Container(
-                  width: 40,
-                  height: 40,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    color: hasSword 
-                        ? sword!.data.grade.color.withOpacity(0.3) 
-                        : Colors.grey.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: hasSword ? sword!.data.grade.color : Colors.grey[700]!,
-                    ),
-                  ),
-                  child: Center(
-                    child: hasSword
-                        ? SwordImageWidget(
-                            grade: sword!.data.grade,
-                            element: sword.data.element,
-                            level: sword.level,
-                            size: 28,
-                            showPulse: false,
-                          )
-                        : Text('${i + 1}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                  ),
-                );
-              }),
-              
-              // 화살표
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Icon(
-                  Icons.arrow_forward,
-                  color: _canSynthesize ? Colors.amber : Colors.grey[600],
-                  size: 20,
-                ),
-              ),
-              
-              // ✅ 결과 미리보기 - SwordImageWidget 사용
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: resultGrade?.color.withOpacity(0.3) ?? Colors.grey.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: resultGrade?.color ?? Colors.grey[700]!,
-                    width: 2,
-                  ),
-                ),
-                child: Center(
-                  child: resultGrade != null
-                      ? Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            SwordImageWidget(
-                              grade: resultGrade,
-                              element: selectedElement,
-                              level: 0,
-                              size: 32,
-                              showPulse: false,
-                            ),
-                            // 물음표 오버레이
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: resultGrade.color,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  '?',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : const Text('?', style: TextStyle(color: Colors.grey, fontSize: 14)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          
-          // 자동 합성 체크
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Checkbox(
-                value: _autoSynthesize,
-                onChanged: (v) => setState(() => _autoSynthesize = v ?? false),
-                activeColor: Colors.cyan,
-              ),
-              const Text(
-                '자동 합성',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-
-          // 버튼들 (Wrap으로 감싸서 overflow 방지)
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              // 선택 초기화
-              if (_selectedUids.isNotEmpty)
-                TextButton(
-                  onPressed: () => setState(() => _selectedUids.clear()),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.grey,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                  child: const Text('초기화', style: TextStyle(fontSize: 12)),
-                ),
-              
-              // 🔥 자동 선택 버튼
-              TextButton(
-                onPressed: _autoSelect,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.cyan,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                child: const Text('자동선택', style: TextStyle(fontSize: 12)),
-              ),
-              
-              // 닫기
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                child: const Text('닫기', style: TextStyle(fontSize: 12)),
-              ),
-              
-              // 🔥 합성 버튼
-              ElevatedButton(
-                onPressed: _autoSynthesize
-                    ? (_canAutoSynthesize ? _runAutoSynthesis : null)
-                    : _canSynthesize
-                        ? () {
-                            final swords = List<OwnedSword>.from(_selectedSwords);
-                            setState(() => _selectedUids.clear());
-                            // 🔥 합성 후 새 pity 값을 직접 받아서 업데이트
-                            final newPity = widget.onSynthesize(swords);
-                            setState(() {
-                              _normalToRarePity = newPity['normalToRare'] ?? _normalToRarePity;
-                              _rareToUniquePity = newPity['rareToUnique'] ?? _rareToUniquePity;
-                              _uniqueToLegendPity = newPity['uniqueToLegend'] ?? _uniqueToLegendPity;
-                            });
-                          }
-                        : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey[700],
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-                child: Text(
-                  _autoSynthesize ? '자동 합성' : (_canSynthesize ? '합성!' : '3개 선택'),
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _runAutoSynthesis() {
-    int synthCount = 0;
-    while (true) {
-      final available = widget.inventory
-          .where((s) => _synthesizableGrades.contains(s.data.grade))
-          .where((s) => s.uid != widget.equippedSwordUid)
-          .toList();
-
-      bool didSynthesize = false;
-      for (final grade in _synthesizableGrades) {
-        final gradeSwords = available.where((s) => s.data.grade == grade).toList();
-        if (gradeSwords.length >= 3) {
-          final materials = gradeSwords.take(3).toList();
-          final before = widget.inventory.length;
-          final newPity = widget.onSynthesize(materials, showResult: false);
-          setState(() {
-            _normalToRarePity = newPity['normalToRare'] ?? _normalToRarePity;
-            _rareToUniquePity = newPity['rareToUnique'] ?? _rareToUniquePity;
-            _uniqueToLegendPity = newPity['uniqueToLegend'] ?? _uniqueToLegendPity;
-            _selectedUids.clear();
-          });
-          final after = widget.inventory.length;
-          if (after == before) {
-            // 합성 실패(예: 골드 부족)로 판단
-            return;
-          }
-          synthCount++;
-          didSynthesize = true;
-          break;
-        }
-      }
-
-      if (!didSynthesize) break;
-    }
-
-    if (synthCount > 0 && mounted) {
-      _showAutoSynthesisSummary(synthCount);
-    }
-  }
-
-  void _showAutoSynthesisSummary(int count) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF2a2a4a),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('자동 합성 완료', style: TextStyle(color: Colors.white)),
-        content: Text(
-          '자동 합성 ${count}회 완료되었습니다.',
-          style: const TextStyle(color: Colors.white70),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: layout.u(10),
+          fontWeight: FontWeight.w900,
+          height: 1,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('확인'),
-          ),
-        ],
       ),
     );
   }
-  
-  // 🔥 자동 선택 기능
-  void _autoSelect() {
+
+  int? _pityFor(SwordGrade grade) {
+    return switch (grade) {
+      SwordGrade.normal => _normalToRarePity,
+      SwordGrade.rare => _rareToUniquePity,
+      SwordGrade.unique => _uniqueToLegendPity,
+      _ => null,
+    };
+  }
+
+  void _toggleSword(OwnedSword sword) {
     setState(() {
-      _selectedUids.clear();
-      
-      // 필터된 등급 우선, 없으면 가장 낮은 등급부터
-      final targetGrade = _filterGrade ?? SwordGrade.normal;
-      
-      // 해당 등급 검 찾기
-      final sameSwords = _filteredInventory
-          .where((s) => s.data.grade == targetGrade)
-          .toList();
-      
-      // 3개 선택 (레벨 낮은 것 우선)
-      sameSwords.sort((a, b) => a.level.compareTo(b.level));
-      
-      for (var i = 0; i < sameSwords.length && _selectedUids.length < 3; i++) {
-        _selectedUids.add(sameSwords[i].uid);
+      if (_selectedUids.contains(sword.uid)) {
+        _selectedUids.remove(sword.uid);
+        return;
       }
-      
-      // 3개 못 채웠으면 다음 등급 시도
-      if (_selectedUids.length < 3) {
+
+      if (_selectedSwords.isNotEmpty &&
+          _selectedSwords.first.data.grade != sword.data.grade) {
         _selectedUids.clear();
-        
-        for (final grade in _synthesizableGrades) {
-          final gradeSwords = _filteredInventory
-              .where((s) => s.data.grade == grade)
-              .toList();
-          
-          if (gradeSwords.length >= 3) {
-            gradeSwords.sort((a, b) => a.level.compareTo(b.level));
-            for (var i = 0; i < 3; i++) {
-              _selectedUids.add(gradeSwords[i].uid);
-            }
-            break;
-          }
-        }
       }
+
+      if (_selectedUids.length >= AppConstants.synthesisRequiredCount) {
+        _selectedUids.remove(_selectedSwords.first.uid);
+      }
+      _selectedUids.add(sword.uid);
     });
   }
+
+  void _synthesize() {
+    if (!_canSynthesize) return;
+    final newPity = widget.onSynthesize(_selectedSwords);
+    setState(() {
+      _normalToRarePity = newPity['normalToRare'] ?? _normalToRarePity;
+      _rareToUniquePity = newPity['rareToUnique'] ?? _rareToUniquePity;
+      _uniqueToLegendPity = newPity['uniqueToLegend'] ?? _uniqueToLegendPity;
+      _selectedUids.clear();
+    });
+  }
+
+  String _formatProbability(double value) {
+    if (value >= 1) {
+      return value == value.truncate()
+          ? value.truncate().toString()
+          : value.toStringAsFixed(1);
+    }
+    return value.toStringAsFixed(value < 0.1 ? 3 : 2);
+  }
+
+  Widget _fitText(
+    _SynthesisLayout layout,
+    String text,
+    double baseSize, {
+    Color color = Colors.white,
+    FontWeight fontWeight = FontWeight.w700,
+  }) {
+    final fontSize = layout.u(baseSize);
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: layout.u(4)),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
+          child: Text(
+            text,
+            maxLines: 1,
+            softWrap: false,
+            textAlign: TextAlign.center,
+            textHeightBehavior: const TextHeightBehavior(
+              applyHeightToFirstAscent: false,
+              applyHeightToLastDescent: false,
+            ),
+            strutStyle: StrutStyle(
+              fontSize: fontSize,
+              height: 1,
+              forceStrutHeight: true,
+            ),
+            style: TextStyle(
+              color: color,
+              fontSize: fontSize,
+              fontWeight: fontWeight,
+              height: 1,
+              shadows: const [
+                Shadow(
+                  color: Colors.black,
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fitMultiline(
+    _SynthesisLayout layout,
+    String text,
+    double baseSize, {
+    Color color = Colors.white,
+    FontWeight fontWeight = FontWeight.w700,
+  }) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: layout.u(3)),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
+          child: Text(
+            text,
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: color,
+              fontSize: layout.u(baseSize),
+              fontWeight: fontWeight,
+              height: 1.05,
+              shadows: const [
+                Shadow(
+                  color: Colors.black,
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _box(_SynthesisLayout layout, Rect rect, Widget child) {
+    return Positioned.fromRect(rect: layout.r(rect), child: child);
+  }
+
+  Widget _tap(_SynthesisLayout layout, Rect rect, VoidCallback? onTap) {
+    return _box(
+      layout,
+      rect,
+      GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: onTap,
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+class _SynthesisLayout {
+  final double width;
+  final double height;
+  late final double sx = width / SynthesisDialog._baseWidth;
+  late final double sy = height / SynthesisDialog._baseHeight;
+  late final double s = math.min(sx, sy);
+
+  _SynthesisLayout(this.width, this.height);
+
+  double u(double value) => value * s;
+
+  Rect r(Rect rect) => Rect.fromLTWH(
+    rect.left * sx,
+    rect.top * sy,
+    rect.width * sx,
+    rect.height * sy,
+  );
+}
+
+class _SynthesisRects {
+  static const close = Rect.fromLTWH(19, 24, 102, 102);
+  static const title = Rect.fromLTWH(236, 184, 470, 110);
+  static const gradeTabs = [
+    Rect.fromLTWH(35, 374, 158, 70),
+    Rect.fromLTWH(210, 374, 158, 70),
+    Rect.fromLTWH(385, 374, 158, 70),
+    Rect.fromLTWH(560, 374, 158, 70),
+    Rect.fromLTWH(735, 374, 158, 70),
+  ];
+  static const rateSlots = [
+    Rect.fromLTWH(241, 501, 74, 60),
+    Rect.fromLTWH(387, 501, 74, 60),
+    Rect.fromLTWH(534, 501, 74, 60),
+    Rect.fromLTWH(680, 501, 74, 60),
+    Rect.fromLTWH(826, 501, 74, 60),
+  ];
+  static const grid = Rect.fromLTWH(34, 613, 875, 635);
+  static const materialSlots = [
+    Rect.fromLTWH(179, 1325, 148, 148),
+    Rect.fromLTWH(386, 1325, 148, 148),
+    Rect.fromLTWH(607, 1325, 148, 148),
+  ];
+  static const button = Rect.fromLTWH(207, 1520, 562, 88);
 }

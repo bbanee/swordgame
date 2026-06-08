@@ -7,8 +7,9 @@ import '../enums/element.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../enums/sword_grade.dart';
-import '../services/sound_service.dart';  // 🔊 사운드 서비스
-import '../widgets/sword_image_widget.dart';  // 🗡️ 검 이미지 위젯
+import '../services/sound_service.dart'; // 🔊 사운드 서비스
+import '../widgets/sword_image_widget.dart'; // 🗡️ 검 이미지 위젯
+part 'boss_raid_screen/painters.dart';
 
 // ============================================================
 // 데미지 팝업 데이터 클래스
@@ -19,7 +20,7 @@ class _DamagePopup {
   final bool isPlayerDamage;
   final Offset position;
   final String id;
-  
+
   _DamagePopup({
     required this.damage,
     required this.isCritical,
@@ -38,7 +39,7 @@ class _Particle {
   Color color;
   double life;
   final double maxLife;
-  
+
   _Particle({
     required this.x,
     required this.y,
@@ -48,14 +49,14 @@ class _Particle {
     required this.color,
     required this.maxLife,
   }) : life = maxLife;
-  
+
   void update() {
     x += vx;
     y += vy;
     vy += 0.5; // 중력
     life -= 0.02;
   }
-  
+
   bool get isDead => life <= 0;
   double get opacity => maxLife > 0 ? (life / maxLife).clamp(0.0, 1.0) : 0.0;
 }
@@ -67,11 +68,9 @@ class _SkillEffect {
   final String skillName;
   final Color color;
   final String id;
-  
-  _SkillEffect({
-    required this.skillName,
-    required this.color,
-  }) : id = DateTime.now().microsecondsSinceEpoch.toString();
+
+  _SkillEffect({required this.skillName, required this.color})
+    : id = DateTime.now().microsecondsSinceEpoch.toString();
 }
 
 class BossRaidScreen extends StatefulWidget {
@@ -94,7 +93,6 @@ class BossRaidScreen extends StatefulWidget {
 
 class _BossRaidScreenState extends State<BossRaidScreen>
     with TickerProviderStateMixin {
-  
   // ============================================================
   // 애니메이션 컨트롤러들
   // ============================================================
@@ -109,12 +107,12 @@ class _BossRaidScreenState extends State<BossRaidScreen>
   late AnimationController _defeatController;
   late AnimationController _particleController;
   late AnimationController _elementEffectController;
-  
+
   // ✅ 보스 모션 애니메이션 컨트롤러
-  late AnimationController _bossIdleController;      // 기본 숨쉬기
-  late AnimationController _bossFloatController;     // 떠다니기
-  late AnimationController _bossElementController;   // 원소별 특수효과
-  
+  late AnimationController _bossIdleController; // 기본 숨쉬기
+  late AnimationController _bossFloatController; // 떠다니기
+  late AnimationController _bossElementController; // 원소별 특수효과
+
   late Animation<double> _shakeAnimation;
   late Animation<double> _pulseAnimation;
   late Animation<double> _flashAnimation;
@@ -125,11 +123,11 @@ class _BossRaidScreenState extends State<BossRaidScreen>
   late Animation<double> _comboAnimation;
   late Animation<double> _victoryAnimation;
   late Animation<double> _defeatAnimation;
-  
+
   // ✅ 보스 모션 애니메이션
-  late Animation<double> _bossIdleAnimation;         // 숨쉬기 스케일
-  late Animation<double> _bossFloatAnimation;        // 위아래 이동
-  late Animation<double> _bossElementAnimation;      // 원소별 효과
+  late Animation<double> _bossIdleAnimation; // 숨쉬기 스케일
+  late Animation<double> _bossFloatAnimation; // 위아래 이동
+  late Animation<double> _bossElementAnimation; // 원소별 효과
 
   final _random = Random();
 
@@ -140,7 +138,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
   int _maxBossHp = 0;
   int _playerHp = 0;
   int _maxPlayerHp = 0;
-  double _displayedBossHp = 0;  // HP바 애니메이션용
+  double _displayedBossHp = 0; // HP바 애니메이션용
   double _displayedPlayerHp = 0;
   bool _battleStarted = false;
   bool _battleEnded = false;
@@ -150,7 +148,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
   bool _allowPop = false;
   int _turn = 0;
   bool _bossEntranceComplete = false;
-  
+
   // ============================================================
   // 이펙트 상태
   // ============================================================
@@ -160,7 +158,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
   int _comboCount = 0;
   bool _showCombo = false;
   double _shakeIntensity = 1.0;
-  
+
   // 배틀 로그
   final List<String> _battleLog = [];
   final ScrollController _logScrollController = ScrollController();
@@ -174,7 +172,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     _initAnimations();
     _initBattle();
     _startBossEntrance();
-    
+
     // 🎵 보스 BGM 재생
     SoundService().playBossBgm();
   }
@@ -207,7 +205,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       vsync: this,
     );
     _flashAnimation = Tween<double>(begin: 0, end: 1).animate(_flashController);
-    
+
     // 크리티컬 플래시 (노랑)
     _criticalFlashController = AnimationController(
       duration: const Duration(milliseconds: 200),
@@ -216,28 +214,37 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     _criticalFlashAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _criticalFlashController, curve: Curves.easeOut),
     );
-    
+
     // 보스 등장 애니메이션
     _bossEntranceController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
     _bossEntranceAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _bossEntranceController, curve: Curves.easeOutBack),
+      CurvedAnimation(
+        parent: _bossEntranceController,
+        curve: Curves.easeOutBack,
+      ),
     );
     _bossEntranceScale = Tween<double>(begin: 3.0, end: 1.0).animate(
-      CurvedAnimation(parent: _bossEntranceController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+        parent: _bossEntranceController,
+        curve: Curves.easeOutCubic,
+      ),
     );
-    
+
     // 스킬 이펙트 애니메이션
     _skillEffectController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     _skillEffectAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _skillEffectController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+        parent: _skillEffectController,
+        curve: Curves.easeOutCubic,
+      ),
     );
-    
+
     // 콤보 애니메이션
     _comboController = AnimationController(
       duration: const Duration(milliseconds: 500),
@@ -246,7 +253,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     _comboAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _comboController, curve: Curves.elasticOut),
     );
-    
+
     // 승리 애니메이션
     _victoryController = AnimationController(
       duration: const Duration(milliseconds: 1000),
@@ -255,7 +262,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     _victoryAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _victoryController, curve: Curves.easeOutCubic),
     );
-    
+
     // 패배 애니메이션
     _defeatController = AnimationController(
       duration: const Duration(milliseconds: 1500),
@@ -264,23 +271,23 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     _defeatAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _defeatController, curve: Curves.easeInOut),
     );
-    
+
     // 파티클 애니메이션
     _particleController = AnimationController(
       duration: const Duration(milliseconds: 16), // 60fps
       vsync: this,
     )..addListener(_updateParticles);
-    
+
     // 원소 이펙트 애니메이션 (반복)
     _elementEffectController = AnimationController(
       duration: const Duration(seconds: 3),
       vsync: this,
     )..repeat();
-    
+
     // ============================================================
     // ✅ 보스 모션 애니메이션 초기화
     // ============================================================
-    
+
     // 1. 숨쉬기 애니메이션 (스케일 변화)
     _bossIdleController = AnimationController(
       duration: const Duration(milliseconds: 2000),
@@ -289,7 +296,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     _bossIdleAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(parent: _bossIdleController, curve: Curves.easeInOut),
     );
-    
+
     // 2. 떠다니기 애니메이션 (위아래 움직임)
     _bossFloatController = AnimationController(
       duration: const Duration(milliseconds: 3000),
@@ -298,7 +305,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     _bossFloatAnimation = Tween<double>(begin: -8.0, end: 8.0).animate(
       CurvedAnimation(parent: _bossFloatController, curve: Curves.easeInOut),
     );
-    
+
     // 3. 원소별 특수효과 애니메이션
     _bossElementController = AnimationController(
       duration: _getElementAnimationDuration(),
@@ -308,23 +315,23 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       CurvedAnimation(parent: _bossElementController, curve: Curves.easeInOut),
     );
   }
-  
+
   // 원소별 애니메이션 속도
   Duration _getElementAnimationDuration() {
     switch (widget.boss.element) {
       case GameElement.fire:
-        return const Duration(milliseconds: 150);  // 빠른 흔들림
+        return const Duration(milliseconds: 150); // 빠른 흔들림
       case GameElement.water:
         return const Duration(milliseconds: 2500); // 느린 물결
       case GameElement.nature:
         return const Duration(milliseconds: 4000); // 부드러운 바람
       case GameElement.light:
-        return const Duration(milliseconds: 800);  // 빛 깜빡임
+        return const Duration(milliseconds: 800); // 빛 깜빡임
       case GameElement.dark:
         return const Duration(milliseconds: 3000); // 어둠 펄스
     }
   }
-  
+
   // 원소별 reverse 여부
   bool _shouldReverseElementAnimation() {
     switch (widget.boss.element) {
@@ -347,7 +354,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     _playerHp = _maxPlayerHp;
     _displayedPlayerHp = _maxPlayerHp.toDouble();
   }
-  
+
   // ============================================================
   // 보스 등장 연출 (이펙트 #6)
   // ============================================================
@@ -378,15 +385,15 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     _bossElementController.dispose();
     _logScrollController.dispose();
     _battleTimer?.cancel();
-    
+
     // 🎵 BGM 정리 (뒤로가기 등 비정상 종료 시)
     if (!_battleEnded) {
       SoundService().playMainBgm();
     }
-    
+
     super.dispose();
   }
-  
+
   // 🔙 뒤로가기 처리
   Future<bool> _onWillPop() async {
     if (_battleEnded) {
@@ -394,16 +401,13 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       _completeBattleAndExit();
       return false;
     }
-    
+
     // 전투 중 도망 확인
     final shouldExit = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1a1a2e),
-        title: const Text(
-          '⚠️ 전투 포기',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('⚠️ 전투 포기', style: TextStyle(color: Colors.white)),
         content: const Text(
           '전투를 포기하시겠습니까?\n패배로 처리됩니다.',
           style: TextStyle(color: Colors.white70),
@@ -420,14 +424,14 @@ class _BossRaidScreenState extends State<BossRaidScreen>
         ],
       ),
     );
-    
+
     if (shouldExit == true) {
       _battleTimer?.cancel();
       SoundService().playMainBgm();
       if (!_completionHandled) {
         _completionHandled = true;
         try {
-          widget.onComplete(false);  // 패배 처리 (쿨다운 적용)
+          widget.onComplete(false); // 패배 처리 (쿨다운 적용)
         } catch (e) {
           debugPrint('⚠️ boss onComplete failed on surrender: $e');
         }
@@ -447,28 +451,37 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       }
       _particles.removeWhere((p) => p.isDead);
     });
-    
+
     if (_particles.isNotEmpty) {
       _particleController.forward(from: 0);
     }
   }
-  
-  void _spawnParticles(Offset center, Color color, {int count = 20, bool isExplosion = true}) {
+
+  void _spawnParticles(
+    Offset center,
+    Color color, {
+    int count = 20,
+    bool isExplosion = true,
+  }) {
     for (int i = 0; i < count; i++) {
       final angle = _random.nextDouble() * 2 * pi;
-      final speed = isExplosion ? 3 + _random.nextDouble() * 8 : 1 + _random.nextDouble() * 3;
-      
-      _particles.add(_Particle(
-        x: center.dx,
-        y: center.dy,
-        vx: cos(angle) * speed,
-        vy: sin(angle) * speed - (isExplosion ? 5 : 0),
-        size: 4 + _random.nextDouble() * 8,
-        color: color,
-        maxLife: 0.5 + _random.nextDouble() * 0.5,
-      ));
+      final speed = isExplosion
+          ? 3 + _random.nextDouble() * 8
+          : 1 + _random.nextDouble() * 3;
+
+      _particles.add(
+        _Particle(
+          x: center.dx,
+          y: center.dy,
+          vx: cos(angle) * speed,
+          vy: sin(angle) * speed - (isExplosion ? 5 : 0),
+          size: 4 + _random.nextDouble() * 8,
+          color: color,
+          maxLife: 0.5 + _random.nextDouble() * 0.5,
+        ),
+      );
     }
-    
+
     _particleController.forward(from: 0);
   }
 
@@ -477,19 +490,21 @@ class _BossRaidScreenState extends State<BossRaidScreen>
   // ============================================================
   void _addDamagePopup(int damage, bool isCritical, bool isPlayerDamage) {
     final screenSize = MediaQuery.of(context).size;
-    final position = isPlayerDamage 
+    final position = isPlayerDamage
         ? Offset(screenSize.width * 0.5, screenSize.height * 0.7)
         : Offset(screenSize.width * 0.5, screenSize.height * 0.25);
-    
+
     setState(() {
-      _damagePopups.add(_DamagePopup(
-        damage: damage,
-        isCritical: isCritical,
-        isPlayerDamage: isPlayerDamage,
-        position: position,
-      ));
+      _damagePopups.add(
+        _DamagePopup(
+          damage: damage,
+          isCritical: isCritical,
+          isPlayerDamage: isPlayerDamage,
+          position: position,
+        ),
+      );
     });
-    
+
     // 2초 후 제거
     Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted) {
@@ -499,7 +514,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       }
     });
   }
-  
+
   // ============================================================
   // 스킬 이펙트 (이펙트 #2)
   // ============================================================
@@ -507,9 +522,9 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     setState(() {
       _skillEffects.add(_SkillEffect(skillName: skillName, color: color));
     });
-    
+
     _skillEffectController.forward(from: 0);
-    
+
     // 1초 후 제거
     Future.delayed(const Duration(milliseconds: 1000), () {
       if (mounted && _skillEffects.isNotEmpty) {
@@ -517,7 +532,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       }
     });
   }
-  
+
   // ============================================================
   // 콤보 카운터 (이펙트 #8)
   // ============================================================
@@ -526,9 +541,9 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       _comboCount++;
       _showCombo = true;
     });
-    
+
     _comboController.forward(from: 0);
-    
+
     // 2초 후 숨김
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted && !_battleEnded) {
@@ -536,7 +551,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       }
     });
   }
-  
+
   void _resetCombo() {
     setState(() {
       _comboCount = 0;
@@ -548,7 +563,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     setState(() {
       _battleLog.add(message);
     });
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_logScrollController.hasClients) {
         _logScrollController.animateTo(
@@ -562,7 +577,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
 
   void _startBattle() {
     if (!_bossEntranceComplete) return;
-    
+
     setState(() => _battleStarted = true);
     _addLog('');
     _addLog('🔥 전투 시작!');
@@ -574,7 +589,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
 
     _battleTimer = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
-      
+
       _turn++;
       _playerAttack();
     });
@@ -586,7 +601,10 @@ class _BossRaidScreenState extends State<BossRaidScreen>
   void _playerAttack() {
     final playerElement = widget.playerSword.data.element;
     final bossElement = widget.boss.element;
-    final elementMultiplier = calculateElementMultiplier(playerElement, bossElement);
+    final elementMultiplier = calculateElementMultiplier(
+      playerElement,
+      bossElement,
+    );
 
     // ✅ v7: PvP와 동일한 데미지 공식 적용
     int baseDamage = 60 + (widget.playerPower * 0.15).round();
@@ -600,7 +618,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
         baseDamage = (baseDamage * skill.multiplier).floor();
         skillUsed = skill.name;
         skillColor = skill.element?.color ?? playerElement.color;
-        
+
         // 스킬 이펙트 표시 (이펙트 #2)
         _showSkillEffect(skill.name, skillColor);
         break;
@@ -614,7 +632,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
 
     // 최종 데미지
     final damage = calculateDamage(baseDamage, multiplier: elementMultiplier);
-    
+
     // 🔊 타격 사운드
     SoundService().playBattleHit();
 
@@ -623,7 +641,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       // 화면 흔들림 강도 (이펙트 #9)
       _shakeIntensity = (damage / 100).clamp(1.0, 5.0);
     });
-    
+
     // HP바 애니메이션 (이펙트 #5)
     _animateHpBar();
 
@@ -641,10 +659,10 @@ class _BossRaidScreenState extends State<BossRaidScreen>
 
     // 데미지 팝업 (이펙트 #1)
     _addDamagePopup(damage, isCritical, false);
-    
+
     // 콤보 증가 (이펙트 #8)
     _incrementCombo();
-    
+
     // 파티클 폭발 (이펙트 #4)
     final screenSize = MediaQuery.of(context).size;
     _spawnParticles(
@@ -656,10 +674,12 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     // 애니메이션
     _pulseController.forward().then((_) => _pulseController.reverse());
     _shakeController.forward().then((_) => _shakeController.reverse());
-    
+
     // 크리티컬 이펙트 (이펙트 #3)
     if (isCritical) {
-      _criticalFlashController.forward().then((_) => _criticalFlashController.reverse());
+      _criticalFlashController.forward().then(
+        (_) => _criticalFlashController.reverse(),
+      );
     }
 
     // 보스 처치 체크
@@ -681,28 +701,34 @@ class _BossRaidScreenState extends State<BossRaidScreen>
   void _bossAttack() {
     final playerElement = widget.playerSword.data.element;
     final bossElement = widget.boss.element;
-    final elementMultiplier = calculateElementMultiplier(bossElement, playerElement);
-    
-    final damage = calculateDamage(widget.boss.atk, multiplier: elementMultiplier);
-    
+    final elementMultiplier = calculateElementMultiplier(
+      bossElement,
+      playerElement,
+    );
+
+    final damage = calculateDamage(
+      widget.boss.atk,
+      multiplier: elementMultiplier,
+    );
+
     // 🔊 타격 사운드
     SoundService().playBattleHit();
 
     setState(() {
       _playerHp = max(0, _playerHp - damage);
     });
-    
+
     // HP바 애니메이션 (이펙트 #5)
     _animateHpBar();
 
     _addLog('보스 반격! $damage 데미지');
-    
+
     // 데미지 팝업 (이펙트 #1)
     _addDamagePopup(damage, false, true);
-    
+
     // 콤보 리셋 (피격 시)
     _resetCombo();
-    
+
     // 파티클 (플레이어 피격)
     final screenSize = MediaQuery.of(context).size;
     _spawnParticles(
@@ -729,18 +755,18 @@ class _BossRaidScreenState extends State<BossRaidScreen>
 
     _nextTurn();
   }
-  
+
   // HP바 부드럽게 애니메이션 (이펙트 #5)
   void _animateHpBar() {
     final bossTarget = _bossHp.toDouble();
     final playerTarget = _playerHp.toDouble();
-    
+
     Timer.periodic(const Duration(milliseconds: 16), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
       }
-      
+
       setState(() {
         // 보스 HP
         if ((_displayedBossHp - bossTarget).abs() > 1) {
@@ -748,7 +774,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
         } else {
           _displayedBossHp = bossTarget;
         }
-        
+
         // 플레이어 HP
         if ((_displayedPlayerHp - playerTarget).abs() > 1) {
           _displayedPlayerHp += (playerTarget - _displayedPlayerHp) * 0.15;
@@ -756,8 +782,9 @@ class _BossRaidScreenState extends State<BossRaidScreen>
           _displayedPlayerHp = playerTarget;
         }
       });
-      
-      if (_displayedBossHp == bossTarget && _displayedPlayerHp == playerTarget) {
+
+      if (_displayedBossHp == bossTarget &&
+          _displayedPlayerHp == playerTarget) {
         timer.cancel();
       }
     });
@@ -771,7 +798,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     if (_battleEnded) return;
 
     _battleTimer?.cancel();
-    
+
     setState(() {
       _battleEnded = true;
       _isWin = win;
@@ -781,10 +808,10 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       _addLog('');
       _addLog('🎉 승리! ${widget.boss.name} 처치!');
       _addLog('+${widget.boss.goldReward}G +${widget.boss.diamondReward}💎');
-      
+
       // 🔊 승리 사운드
       SoundService().playBattleWin();
-      
+
       // 승리 이펙트: 황금빛 파티클 폭발
       _victoryController.forward();
       final screenSize = MediaQuery.of(context).size;
@@ -806,10 +833,10 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     } else {
       _addLog('');
       _addLog('💀 패배... 다음에 다시 도전하세요');
-      
+
       // 🔊 패배 사운드
       SoundService().playBattleLose();
-      
+
       // 패배 이펙트: 화면 흑백
       _defeatController.forward();
     }
@@ -914,130 +941,131 @@ class _BossRaidScreenState extends State<BossRaidScreen>
         }
       },
       child: Scaffold(
-      body: AnimatedBuilder(
-        animation: _defeatAnimation,
-        builder: (context, child) {
-          // 패배 시 흑백 효과 (이펙트 #10)
-          return ColorFiltered(
-            colorFilter: ColorFilter.matrix(_getGrayscaleMatrix(_defeatAnimation.value)),
-            child: child,
-          );
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                widget.boss.element.color.withOpacity(0.4),
-                AppColors.backgroundDark,
-                AppColors.background,
-              ],
+        body: AnimatedBuilder(
+          animation: _defeatAnimation,
+          builder: (context, child) {
+            // 패배 시 흑백 효과 (이펙트 #10)
+            return ColorFiltered(
+              colorFilter: ColorFilter.matrix(
+                _getGrayscaleMatrix(_defeatAnimation.value),
+              ),
+              child: child,
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  widget.boss.element.color.withOpacity(0.4),
+                  AppColors.backgroundDark,
+                  AppColors.background,
+                ],
+              ),
             ),
-          ),
-          child: SafeArea(
-            child: Stack(
-              children: [
-                // 원소 배경 이펙트 (이펙트 #7)
-                _buildElementBackground(),
-                
-                // 배경 파티클
-                _buildBackgroundParticles(),
-                
-                // 피격 플래시 (빨강)
-                _buildFlashOverlay(),
-                
-                // 크리티컬 플래시 (노랑) (이펙트 #3)
-                _buildCriticalFlashOverlay(),
-                
-                // 승리 플래시 (이펙트 #10)
-                _buildVictoryOverlay(),
-                
-                // 메인 컨텐츠
-                AnimatedBuilder(
-                  animation: _shakeAnimation,
-                  builder: (context, child) {
-                    // 화면 흔들림 강화 (이펙트 #9)
-                    final offset = _shakeAnimation.value * _shakeIntensity * 10;
-                    return Transform.translate(
-                      offset: Offset(
-                        offset * (_random.nextBool() ? 1 : -1),
-                        offset * 0.5 * (_random.nextBool() ? 1 : -1),
-                      ),
-                      child: child,
-                    );
-                  },
-                  child: SafeArea(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return Column(
-                          children: [
-                            _buildHeader(),
-                            Expanded(
-                              child: SingleChildScrollView(
-                                physics: const ClampingScrollPhysics(),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minHeight: constraints.maxHeight - 60, // header 높이 제외
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      _buildBattleArea(),
-                                      Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          _buildBattleLog(),
-                                          _buildPlayerArea(),
-                                          _buildActionButton(),
-                                        ],
-                                      ),
-                                    ],
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  // 원소 배경 이펙트 (이펙트 #7)
+                  _buildElementBackground(),
+
+                  // 배경 파티클
+                  _buildBackgroundParticles(),
+
+                  // 피격 플래시 (빨강)
+                  _buildFlashOverlay(),
+
+                  // 크리티컬 플래시 (노랑) (이펙트 #3)
+                  _buildCriticalFlashOverlay(),
+
+                  // 승리 플래시 (이펙트 #10)
+                  _buildVictoryOverlay(),
+
+                  // 메인 컨텐츠
+                  AnimatedBuilder(
+                    animation: _shakeAnimation,
+                    builder: (context, child) {
+                      // 화면 흔들림 강화 (이펙트 #9)
+                      final offset =
+                          _shakeAnimation.value * _shakeIntensity * 10;
+                      return Transform.translate(
+                        offset: Offset(
+                          offset * (_random.nextBool() ? 1 : -1),
+                          offset * 0.5 * (_random.nextBool() ? 1 : -1),
+                        ),
+                        child: child,
+                      );
+                    },
+                    child: SafeArea(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return Column(
+                            children: [
+                              _buildHeader(),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  physics: const ClampingScrollPhysics(),
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      minHeight:
+                                          constraints.maxHeight -
+                                          60, // header 높이 제외
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        _buildBattleArea(),
+                                        Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            _buildBattleLog(),
+                                            _buildPlayerArea(),
+                                            _buildActionButton(),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        );
-                      },
+                            ],
+                          );
+                        },
+                      ),
                     ),
                   ),
-                ),
-                
-                // 파티클 레이어 (이펙트 #4)
-                _buildParticleLayer(),
-                
-                // 데미지 팝업 레이어 (이펙트 #1)
-                _buildDamagePopupLayer(),
-                
-                // 스킬 이펙트 레이어 (이펙트 #2)
-                _buildSkillEffectLayer(),
-                
-                // 콤보 카운터 (이펙트 #8)
-                _buildComboCounter(),
-                
-                // 보스 등장 연출 (이펙트 #6)
-                if (!_bossEntranceComplete) _buildBossEntranceOverlay(),
-              ],
+
+                  // 파티클 레이어 (이펙트 #4)
+                  _buildParticleLayer(),
+
+                  // 데미지 팝업 레이어 (이펙트 #1)
+                  _buildDamagePopupLayer(),
+
+                  // 스킬 이펙트 레이어 (이펙트 #2)
+                  _buildSkillEffectLayer(),
+
+                  // 콤보 카운터 (이펙트 #8)
+                  _buildComboCounter(),
+
+                  // 보스 등장 연출 (이펙트 #6)
+                  if (!_bossEntranceComplete) _buildBossEntranceOverlay(),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
-  
+
   // 흑백 매트릭스 (패배 효과용)
   List<double> _getGrayscaleMatrix(double amount) {
     final v = 1 - amount * 0.8;
-    return [
-      v, 1-v, 0, 0, 0,
-      0, v, 1-v, 0, 0,
-      0, 0, v, 0, 0,
-      0, 0, 0, 1, 0,
-    ];
+    return [v, 1 - v, 0, 0, 0, 0, v, 1 - v, 0, 0, 0, 0, v, 0, 0, 0, 0, 0, 1, 0];
   }
-  
+
   // ============================================================
   // 원소 배경 이펙트 (이펙트 #7)
   // ============================================================
@@ -1049,8 +1077,12 @@ class _BossRaidScreenState extends State<BossRaidScreen>
           child: LayoutBuilder(
             builder: (context, constraints) {
               final actualSize = Size(
-                constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.of(context).size.width,
-                constraints.maxHeight.isFinite ? constraints.maxHeight : MediaQuery.of(context).size.height,
+                constraints.maxWidth.isFinite
+                    ? constraints.maxWidth
+                    : MediaQuery.of(context).size.width,
+                constraints.maxHeight.isFinite
+                    ? constraints.maxHeight
+                    : MediaQuery.of(context).size.height,
               );
               return CustomPaint(
                 painter: _ElementBackgroundPainter(
@@ -1075,7 +1107,10 @@ class _BossRaidScreenState extends State<BossRaidScreen>
             children: List.generate(15, (i) {
               final size = 8.0 + (i % 5) * 4;
               // opacity 값을 0.0 ~ 1.0 범위로 제한
-              final opacity = (0.3 + (_pulseAnimation.value - 1) * 0.5).clamp(0.0, 1.0);
+              final opacity = (0.3 + (_pulseAnimation.value - 1) * 0.5).clamp(
+                0.0,
+                1.0,
+              );
               return Positioned(
                 left: (i * 67.3) % MediaQuery.of(context).size.width,
                 top: (i * 41.7) % (MediaQuery.of(context).size.height * 0.6),
@@ -1116,7 +1151,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       },
     );
   }
-  
+
   // 크리티컬 플래시 (이펙트 #3)
   Widget _buildCriticalFlashOverlay() {
     return AnimatedBuilder(
@@ -1127,8 +1162,12 @@ class _BossRaidScreenState extends State<BossRaidScreen>
             decoration: BoxDecoration(
               gradient: RadialGradient(
                 colors: [
-                  Colors.yellow.withOpacity(_criticalFlashAnimation.value * 0.6),
-                  Colors.orange.withOpacity(_criticalFlashAnimation.value * 0.3),
+                  Colors.yellow.withOpacity(
+                    _criticalFlashAnimation.value * 0.6,
+                  ),
+                  Colors.orange.withOpacity(
+                    _criticalFlashAnimation.value * 0.3,
+                  ),
                   Colors.transparent,
                 ],
               ),
@@ -1138,7 +1177,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       },
     );
   }
-  
+
   // 승리 오버레이 (이펙트 #10)
   Widget _buildVictoryOverlay() {
     return AnimatedBuilder(
@@ -1161,15 +1200,19 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       },
     );
   }
-  
+
   // 파티클 레이어 (이펙트 #4)
   Widget _buildParticleLayer() {
     return IgnorePointer(
       child: LayoutBuilder(
         builder: (context, constraints) {
           final actualSize = Size(
-            constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.of(context).size.width,
-            constraints.maxHeight.isFinite ? constraints.maxHeight : MediaQuery.of(context).size.height,
+            constraints.maxWidth.isFinite
+                ? constraints.maxWidth
+                : MediaQuery.of(context).size.width,
+            constraints.maxHeight.isFinite
+                ? constraints.maxHeight
+                : MediaQuery.of(context).size.height,
           );
           return CustomPaint(
             painter: _ParticlePainter(particles: _particles),
@@ -1179,7 +1222,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       ),
     );
   }
-  
+
   // 데미지 팝업 레이어 (이펙트 #1)
   Widget _buildDamagePopupLayer() {
     return IgnorePointer(
@@ -1191,7 +1234,8 @@ class _BossRaidScreenState extends State<BossRaidScreen>
             duration: const Duration(milliseconds: 1000),
             builder: (context, value, _) {
               return Positioned(
-                left: popup.position.dx - 50 + (_random.nextDouble() - 0.5) * 40,
+                left:
+                    popup.position.dx - 50 + (_random.nextDouble() - 0.5) * 40,
                 top: popup.position.dy - value * 80,
                 child: Opacity(
                   opacity: 1 - value * 0.7,
@@ -1200,9 +1244,11 @@ class _BossRaidScreenState extends State<BossRaidScreen>
                     child: Text(
                       '-${popup.damage}',
                       style: TextStyle(
-                        color: popup.isCritical 
-                            ? Colors.yellow 
-                            : (popup.isPlayerDamage ? Colors.red : Colors.white),
+                        color: popup.isCritical
+                            ? Colors.yellow
+                            : (popup.isPlayerDamage
+                                  ? Colors.red
+                                  : Colors.white),
                         fontSize: popup.isCritical ? 36 : 28,
                         fontWeight: FontWeight.bold,
                         shadows: [
@@ -1212,10 +1258,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
                             offset: const Offset(2, 2),
                           ),
                           if (popup.isCritical)
-                            Shadow(
-                              color: Colors.orange,
-                              blurRadius: 10,
-                            ),
+                            Shadow(color: Colors.orange, blurRadius: 10),
                         ],
                       ),
                     ),
@@ -1228,17 +1271,17 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       ),
     );
   }
-  
+
   // 스킬 이펙트 레이어 (이펙트 #2)
   Widget _buildSkillEffectLayer() {
     if (_skillEffects.isEmpty) return const SizedBox.shrink();
-    
+
     return AnimatedBuilder(
       animation: _skillEffectAnimation,
       builder: (context, _) {
         final effect = _skillEffects.isNotEmpty ? _skillEffects.first : null;
         if (effect == null) return const SizedBox.shrink();
-        
+
         // 안전을 위해 clamp 적용
         final skillValue = _skillEffectAnimation.value.clamp(0.0, 1.0);
         return IgnorePointer(
@@ -1248,7 +1291,10 @@ class _BossRaidScreenState extends State<BossRaidScreen>
               child: Transform.scale(
                 scale: 1 + skillValue * 0.5,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(16),
@@ -1267,9 +1313,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
                       color: effect.color,
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      shadows: [
-                        Shadow(color: effect.color, blurRadius: 20),
-                      ],
+                      shadows: [Shadow(color: effect.color, blurRadius: 20)],
                     ),
                   ),
                 ),
@@ -1280,11 +1324,11 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       },
     );
   }
-  
+
   // 콤보 카운터 (이펙트 #8)
   Widget _buildComboCounter() {
     if (!_showCombo || _comboCount < 2) return const SizedBox.shrink();
-    
+
     return Positioned(
       top: 120,
       right: 20,
@@ -1298,11 +1342,12 @@ class _BossRaidScreenState extends State<BossRaidScreen>
             child: Opacity(
               opacity: comboValue,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.orange, Colors.red],
-                  ),
+                  gradient: LinearGradient(colors: [Colors.orange, Colors.red]),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -1340,7 +1385,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       ),
     );
   }
-  
+
   // 보스 등장 오버레이 (이펙트 #6)
   Widget _buildBossEntranceOverlay() {
     return AnimatedBuilder(
@@ -1367,7 +1412,9 @@ class _BossRaidScreenState extends State<BossRaidScreen>
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: widget.boss.element.color.withOpacity(0.8),
+                                  color: widget.boss.element.color.withOpacity(
+                                    0.8,
+                                  ),
                                   blurRadius: 30,
                                   spreadRadius: 10,
                                 ),
@@ -1450,7 +1497,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
             },
           ),
           const Spacer(),
-          
+
           Text(
             '🐉 BOSS RAID',
             style: TextStyle(
@@ -1458,10 +1505,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
               fontSize: 24,
               fontWeight: FontWeight.bold,
               shadows: [
-                Shadow(
-                  color: widget.boss.element.color,
-                  blurRadius: 20,
-                ),
+                Shadow(color: widget.boss.element.color, blurRadius: 20),
               ],
             ),
           ),
@@ -1480,10 +1524,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     return AnimatedBuilder(
       animation: _pulseAnimation,
       builder: (context, child) {
-        return Transform.scale(
-          scale: _pulseAnimation.value,
-          child: child,
-        );
+        return Transform.scale(scale: _pulseAnimation.value, child: child);
       },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1526,8 +1567,9 @@ class _BossRaidScreenState extends State<BossRaidScreen>
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 500),
                       height: 24,
-                      width: (MediaQuery.of(context).size.width - 64) * 
-                             (_displayedBossHp / _maxBossHp).clamp(0.0, 1.0),
+                      width:
+                          (MediaQuery.of(context).size.width - 64) *
+                          (_displayedBossHp / _maxBossHp).clamp(0.0, 1.0),
                       decoration: BoxDecoration(
                         color: Colors.red.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(12),
@@ -1537,8 +1579,9 @@ class _BossRaidScreenState extends State<BossRaidScreen>
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       height: 24,
-                      width: (MediaQuery.of(context).size.width - 64) * 
-                             (_bossHp / _maxBossHp).clamp(0.0, 1.0),
+                      width:
+                          (MediaQuery.of(context).size.width - 64) *
+                          (_bossHp / _maxBossHp).clamp(0.0, 1.0),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -1572,13 +1615,16 @@ class _BossRaidScreenState extends State<BossRaidScreen>
             builder: (context, child) {
               return Transform.translate(
                 offset: Offset(
-                  _getElementOffsetX(),  // 원소별 X 움직임
-                  _bossFloatAnimation.value + _getElementOffsetY(),  // 떠다니기 + 원소별 Y
+                  _getElementOffsetX(), // 원소별 X 움직임
+                  _bossFloatAnimation.value +
+                      _getElementOffsetY(), // 떠다니기 + 원소별 Y
                 ),
                 child: Transform.scale(
-                  scale: _bossIdleAnimation.value * _getElementScale(),  // 숨쉬기 + 원소별 스케일
+                  scale:
+                      _bossIdleAnimation.value *
+                      _getElementScale(), // 숨쉬기 + 원소별 스케일
                   child: Transform.rotate(
-                    angle: _getElementRotation(),  // 원소별 회전
+                    angle: _getElementRotation(), // 원소별 회전
                     child: child,
                   ),
                 ),
@@ -1629,23 +1675,20 @@ class _BossRaidScreenState extends State<BossRaidScreen>
             ),
           ),
           const SizedBox(height: 16),
-          
+
           Text(
             'ATK: ${widget.boss.atk}',
-            style: TextStyle(
-              color: widget.boss.element.color,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: widget.boss.element.color, fontSize: 14),
           ),
         ],
       ),
     );
   }
-  
+
   // ============================================================
   // ✅ 원소별 모션 효과 계산
   // ============================================================
-  
+
   // 원소별 X축 움직임
   double _getElementOffsetX() {
     final value = _bossElementAnimation.value;
@@ -1667,7 +1710,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
         return sin(value * pi) * 8;
     }
   }
-  
+
   // 원소별 Y축 움직임
   double _getElementOffsetY() {
     final value = _bossElementAnimation.value;
@@ -1689,7 +1732,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
         return cos(value * pi) * 3;
     }
   }
-  
+
   // 원소별 스케일 변화
   double _getElementScale() {
     final value = _bossElementAnimation.value;
@@ -1711,7 +1754,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
         return 1.0 + sin(value * pi) * 0.05;
     }
   }
-  
+
   // 원소별 회전
   double _getElementRotation() {
     final value = _bossElementAnimation.value;
@@ -1750,18 +1793,15 @@ class _BossRaidScreenState extends State<BossRaidScreen>
         itemBuilder: (context, index) {
           final log = _battleLog[index];
           Color textColor = Colors.white70;
-          
+
           if (log.contains('승리')) textColor = Colors.green;
           if (log.contains('패배')) textColor = Colors.red;
           if (log.contains('💥')) textColor = Colors.amber;
           if (log.contains('크리티컬')) textColor = Colors.yellow;
-          
+
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Text(
-              log,
-              style: TextStyle(color: textColor, fontSize: 12),
-            ),
+            child: Text(log, style: TextStyle(color: textColor, fontSize: 12)),
           );
         },
       ),
@@ -1770,7 +1810,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
 
   Widget _buildPlayerArea() {
     final sword = widget.playerSword;
-    
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -1787,6 +1827,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
               SwordImageWidget(
                 grade: sword.data.grade,
                 element: sword.data.element,
+                swordId: sword.data.id,
                 level: sword.level,
                 size: 56,
                 showPulse: true,
@@ -1822,7 +1863,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
             ],
           ),
           const SizedBox(height: 12),
-          
+
           // 플레이어 HP 바 (애니메이션 적용)
           Row(
             children: [
@@ -1842,8 +1883,9 @@ class _BossRaidScreenState extends State<BossRaidScreen>
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 500),
                       height: 16,
-                      width: (MediaQuery.of(context).size.width - 150) * 
-                             (_displayedPlayerHp / _maxPlayerHp).clamp(0.0, 1.0),
+                      width:
+                          (MediaQuery.of(context).size.width - 150) *
+                          (_displayedPlayerHp / _maxPlayerHp).clamp(0.0, 1.0),
                       decoration: BoxDecoration(
                         color: Colors.red.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(8),
@@ -1853,20 +1895,23 @@ class _BossRaidScreenState extends State<BossRaidScreen>
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       height: 16,
-                      width: (MediaQuery.of(context).size.width - 150) * 
-                             (_playerHp / _maxPlayerHp).clamp(0.0, 1.0),
+                      width:
+                          (MediaQuery.of(context).size.width - 150) *
+                          (_playerHp / _maxPlayerHp).clamp(0.0, 1.0),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: _playerHp > _maxPlayerHp * 0.3 
+                          colors: _playerHp > _maxPlayerHp * 0.3
                               ? [Colors.green, Colors.lightGreen]
                               : [Colors.red, Colors.orange],
                         ),
                         borderRadius: BorderRadius.circular(8),
                         boxShadow: [
                           BoxShadow(
-                            color: (_playerHp > _maxPlayerHp * 0.3 
-                                ? Colors.green 
-                                : Colors.red).withOpacity(0.5),
+                            color:
+                                (_playerHp > _maxPlayerHp * 0.3
+                                        ? Colors.green
+                                        : Colors.red)
+                                    .withOpacity(0.5),
                             blurRadius: 8,
                           ),
                         ],
@@ -1895,8 +1940,8 @@ class _BossRaidScreenState extends State<BossRaidScreen>
         child: _battleEnded
             ? _buildResultDisplay()
             : _battleStarted
-                ? _buildBattleStatus()
-                : _buildStartButton(),
+            ? _buildBattleStatus()
+            : _buildStartButton(),
       ),
     );
   }
@@ -1907,9 +1952,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
       style: ElevatedButton.styleFrom(
         backgroundColor: widget.boss.element.color,
         padding: const EdgeInsets.symmetric(vertical: 20),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1952,10 +1995,7 @@ class _BossRaidScreenState extends State<BossRaidScreen>
           const SizedBox(width: 12),
           Text(
             '전투 중... (턴 $_turn/50)',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 16),
           ),
         ],
       ),
@@ -1966,10 +2006,8 @@ class _BossRaidScreenState extends State<BossRaidScreen>
     return AnimatedBuilder(
       animation: _isWin ? _victoryAnimation : _defeatAnimation,
       builder: (context, _) {
-        final scale = _isWin 
-            ? 0.5 + _victoryAnimation.value * 0.5
-            : 1.0;
-        
+        final scale = _isWin ? 0.5 + _victoryAnimation.value * 0.5 : 1.0;
+
         return Transform.scale(
           scale: scale,
           child: Container(
@@ -2024,175 +2062,3 @@ class _BossRaidScreenState extends State<BossRaidScreen>
 // ============================================================
 // 파티클 페인터 (이펙트 #4)
 // ============================================================
-class _ParticlePainter extends CustomPainter {
-  final List<_Particle> particles;
-  
-  _ParticlePainter({required this.particles});
-  
-  @override
-  void paint(Canvas canvas, Size size) {
-    // size가 유효하지 않으면 그리지 않음
-    if (size.width <= 0 || size.height <= 0 || 
-        !size.width.isFinite || !size.height.isFinite) {
-      return;
-    }
-    
-    for (final p in particles) {
-      final safeOpacity = p.opacity.clamp(0.0, 1.0);
-      if (safeOpacity <= 0) continue;
-      
-      final safeSize = (p.size * safeOpacity).clamp(0.1, 100.0);
-      if (safeSize <= 0 || !safeSize.isFinite) continue;
-      
-      final paint = Paint()
-        ..color = p.color.withOpacity(safeOpacity)
-        ..style = PaintingStyle.fill;
-      
-      canvas.drawCircle(Offset(p.x, p.y), safeSize, paint);
-      
-      // 글로우 효과
-      final glowOpacity = (safeOpacity * 0.3).clamp(0.0, 1.0);
-      if (glowOpacity > 0) {
-        final glowPaint = Paint()
-          ..color = p.color.withOpacity(glowOpacity)
-          ..style = PaintingStyle.fill
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-        
-        canvas.drawCircle(Offset(p.x, p.y), (safeSize * 1.5).clamp(0.1, 150.0), glowPaint);
-      }
-    }
-  }
-  
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-// ============================================================
-// 원소 배경 페인터 (이펙트 #7)
-// ============================================================
-class _ElementBackgroundPainter extends CustomPainter {
-  final GameElement element;
-  final double progress;
-  
-  _ElementBackgroundPainter({required this.element, required this.progress});
-  
-  @override
-  void paint(Canvas canvas, Size size) {
-    // size가 유효하지 않으면 그리지 않음
-    if (size.width <= 0 || size.height <= 0 || 
-        !size.width.isFinite || !size.height.isFinite) {
-      return;
-    }
-    
-    final paint = Paint()
-      ..style = PaintingStyle.fill;
-    
-    switch (element) {
-      case GameElement.fire:
-        _drawFireEffect(canvas, size, paint);
-        break;
-      case GameElement.water:
-        _drawWaterEffect(canvas, size, paint);
-        break;
-      case GameElement.nature:
-        _drawNatureEffect(canvas, size, paint);
-        break;
-      case GameElement.light:
-        _drawLightEffect(canvas, size, paint);
-        break;
-      case GameElement.dark:
-        _drawDarkEffect(canvas, size, paint);
-        break;
-    }
-  }
-  
-  void _drawFireEffect(Canvas canvas, Size size, Paint paint) {
-    // 불꽃 파티클
-    for (int i = 0; i < 10; i++) {
-      final x = (size.width * (0.1 + i * 0.08) + sin(progress * 2 * pi + i) * 20);
-      final y = size.height * 0.8 - (progress + i * 0.1) % 1 * size.height * 0.3;
-      final radius = (5.0 + sin(progress * 4 * pi + i) * 3).clamp(1.0, 20.0);
-      
-      paint.color = Colors.orange.withOpacity(0.3);
-      canvas.drawCircle(Offset(x, y), radius * 2, paint);
-      paint.color = Colors.red.withOpacity(0.5);
-      canvas.drawCircle(Offset(x, y), radius, paint);
-    }
-  }
-  
-  void _drawWaterEffect(Canvas canvas, Size size, Paint paint) {
-    // 물결 효과
-    final path = Path();
-    for (double x = 0; x <= size.width; x += 10) {
-      final y = size.height * 0.85 + sin(x * 0.02 + progress * 2 * pi) * 15;
-      if (x == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
-    
-    paint.color = Colors.blue.withOpacity(0.15);
-    canvas.drawPath(path, paint);
-  }
-  
-  void _drawNatureEffect(Canvas canvas, Size size, Paint paint) {
-    // 나뭇잎 파티클
-    for (int i = 0; i < 8; i++) {
-      final x = (size.width * (0.1 + i * 0.12) + sin(progress * 2 * pi + i * 0.5) * 30);
-      final y = (progress * size.height + i * 50) % size.height;
-      
-      paint.color = Colors.green.withOpacity(0.4);
-      canvas.save();
-      canvas.translate(x, y);
-      canvas.rotate(progress * 2 * pi + i);
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset.zero, width: 8, height: 12),
-        paint,
-      );
-      canvas.restore();
-    }
-  }
-  
-  void _drawLightEffect(Canvas canvas, Size size, Paint paint) {
-    // 빛줄기
-    for (int i = 0; i < 5; i++) {
-      final startX = size.width * (0.2 + i * 0.15);
-      final opacity = (0.1 + sin(progress * 2 * pi + i) * 0.05).clamp(0.0, 1.0);
-      
-      paint.shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Colors.amber.withOpacity(opacity),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromLTWH(startX - 20, 0, 40, size.height * 0.6));
-      
-      canvas.drawRect(
-        Rect.fromLTWH(startX - 20, 0, 40, size.height * 0.6),
-        paint,
-      );
-    }
-  }
-  
-  void _drawDarkEffect(Canvas canvas, Size size, Paint paint) {
-    // 어둠 파티클
-    for (int i = 0; i < 12; i++) {
-      final x = (size.width * (i / 12) + sin(progress * 2 * pi + i) * 20) % size.width;
-      final y = (size.height * (0.2 + (i % 3) * 0.2) + cos(progress * 2 * pi + i) * 20);
-      final radius = (20.0 + sin(progress * 4 * pi + i) * 10).clamp(1.0, 50.0);
-      
-      paint.color = Colors.purple.withOpacity(0.1);
-      paint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
-      canvas.drawCircle(Offset(x, y), radius, paint);
-    }
-    paint.maskFilter = null;
-  }
-  
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}

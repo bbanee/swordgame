@@ -38,13 +38,16 @@ class _LoginScreenState extends State<LoginScreen>
     super.initState();
 
     // 배경 파티클
-    _particles = List.generate(30, (_) => _Particle(
-      x: _rng.nextDouble(),
-      y: _rng.nextDouble(),
-      speed: 0.1 + _rng.nextDouble() * 0.3,
-      size: 1.0 + _rng.nextDouble() * 2.0,
-      opacity: 0.1 + _rng.nextDouble() * 0.3,
-    ));
+    _particles = List.generate(
+      30,
+      (_) => _Particle(
+        x: _rng.nextDouble(),
+        y: _rng.nextDouble(),
+        speed: 0.1 + _rng.nextDouble() * 0.3,
+        size: 1.0 + _rng.nextDouble() * 2.0,
+        opacity: 0.1 + _rng.nextDouble() * 0.3,
+      ),
+    );
 
     // 배경 루프
     _bgController = AnimationController(
@@ -99,7 +102,10 @@ class _LoginScreenState extends State<LoginScreen>
       }
     }
 
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     final result = _isLoginMode
         ? await _authService.signInWithEmail(email: email, password: password)
@@ -118,7 +124,10 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _signInAsGuest() async {
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     final result = await _authService.signInAnonymously();
 
@@ -135,9 +144,9 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _goToGame() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const OpeningScreen()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const OpeningScreen()));
   }
 
   void _toggleMode() {
@@ -159,8 +168,10 @@ class _LoginScreenState extends State<LoginScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('가입한 이메일 주소를 입력하세요.\n비밀번호 재설정 링크를 보내드립니다.',
-              style: TextStyle(color: Colors.grey[400], fontSize: 14)),
+            Text(
+              '가입한 이메일 주소를 입력하세요.\n비밀번호 재설정 링크를 보내드립니다.',
+              style: TextStyle(color: Colors.grey[400], fontSize: 14),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: resetEmailController,
@@ -193,9 +204,9 @@ class _LoginScreenState extends State<LoginScreen>
             onPressed: () async {
               final email = resetEmailController.text.trim();
               if (email.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('이메일을 입력하세요')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('이메일을 입력하세요')));
                 return;
               }
               Navigator.pop(context);
@@ -206,13 +217,20 @@ class _LoginScreenState extends State<LoginScreen>
               if (result.isSuccess) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('📧 $email로 재설정 이메일을 보냈습니다'), backgroundColor: Colors.green, duration: const Duration(seconds: 4)),
+                    SnackBar(
+                      content: Text('📧 $email로 재설정 이메일을 보냈습니다'),
+                      backgroundColor: Colors.green,
+                      duration: const Duration(seconds: 4),
+                    ),
                   );
                 }
               } else {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result.errorMessage ?? '이메일 전송 실패'), backgroundColor: Colors.red),
+                    SnackBar(
+                      content: Text(result.errorMessage ?? '이메일 전송 실패'),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
               }
@@ -228,7 +246,8 @@ class _LoginScreenState extends State<LoginScreen>
   // ── 테마 색상 ──
   Color get _accentColor => _isLoginMode ? Colors.amber : Colors.cyanAccent;
   Color get _accentDark => _isLoginMode ? Colors.orange : Colors.cyan;
-  Color get _bgTint => _isLoginMode ? const Color(0xFF1a1a2e) : const Color(0xFF141430);
+  Color get _bgTint =>
+      _isLoginMode ? const Color(0xFF1a1a2e) : const Color(0xFF141430);
   String get _swordAsset => _isLoginMode
       ? 'assets/images/swords/sword_immortal.webp'
       : 'assets/images/swords/sword_legend.webp';
@@ -261,7 +280,10 @@ class _LoginScreenState extends State<LoginScreen>
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 16,
+                ),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 400),
                   transitionBuilder: (child, anim) => FadeTransition(
@@ -323,8 +345,14 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ),
         const SizedBox(height: 6),
-        Text('전설의 검사가 되어라',
-          style: TextStyle(fontSize: 14, color: Colors.grey[500], letterSpacing: 1)),
+        Text(
+          '전설의 검사가 되어라',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[500],
+            letterSpacing: 1,
+          ),
+        ),
         const SizedBox(height: 36),
 
         // 입력 폼
@@ -338,7 +366,10 @@ class _LoginScreenState extends State<LoginScreen>
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: _showForgotPasswordDialog,
-            child: Text('비밀번호를 잊으셨나요?', style: TextStyle(color: Colors.blue[300], fontSize: 13)),
+            child: Text(
+              '비밀번호를 잊으셨나요?',
+              style: TextStyle(color: Colors.blue[300], fontSize: 13),
+            ),
           ),
         ),
         const SizedBox(height: 6),
@@ -355,10 +386,20 @@ class _LoginScreenState extends State<LoginScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('계정이 없으신가요?', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            Text(
+              '계정이 없으신가요?',
+              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+            ),
             TextButton(
               onPressed: _toggleMode,
-              child: Text('회원가입', style: TextStyle(color: _accentColor, fontWeight: FontWeight.bold, fontSize: 13)),
+              child: Text(
+                '회원가입',
+                style: TextStyle(
+                  color: _accentColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ],
         ),
@@ -371,9 +412,11 @@ class _LoginScreenState extends State<LoginScreen>
         // 게스트 버튼
         _buildGuestButton(),
         const SizedBox(height: 10),
-        Text('⚠️ 게스트 계정은 앱 삭제 시 데이터가 사라집니다',
+        Text(
+          '⚠️ 게스트 계정은 앱 삭제 시 데이터가 사라집니다',
           style: TextStyle(fontSize: 11, color: Colors.orange[300]),
-          textAlign: TextAlign.center),
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 20),
         _buildPrivacyPolicyLink(),
       ],
@@ -408,8 +451,14 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ),
         const SizedBox(height: 6),
-        Text('새로운 모험의 시작',
-          style: TextStyle(fontSize: 14, color: Colors.grey[500], letterSpacing: 1)),
+        Text(
+          '새로운 모험의 시작',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[500],
+            letterSpacing: 1,
+          ),
+        ),
         const SizedBox(height: 28),
 
         // 회원가입 카드
@@ -420,7 +469,11 @@ class _LoginScreenState extends State<LoginScreen>
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.cyan.withOpacity(0.2)),
             boxShadow: [
-              BoxShadow(color: Colors.cyan.withOpacity(0.05), blurRadius: 20, spreadRadius: 2),
+              BoxShadow(
+                color: Colors.cyan.withOpacity(0.05),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
             ],
           ),
           child: Column(
@@ -433,17 +486,33 @@ class _LoginScreenState extends State<LoginScreen>
                       color: Colors.cyan.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.person_add_alt_1, color: Colors.cyanAccent, size: 22),
+                    child: const Icon(
+                      Icons.person_add_alt_1,
+                      color: Colors.cyanAccent,
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  const Text('회원가입', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    '회원가입',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
 
               _buildInputField(_emailController, '이메일', Icons.email, false),
               const SizedBox(height: 14),
-              _buildInputField(_passwordController, '비밀번호 (6자 이상)', Icons.lock, true),
+              _buildInputField(
+                _passwordController,
+                '비밀번호 (6자 이상)',
+                Icons.lock,
+                true,
+              ),
               const SizedBox(height: 16),
 
               // 에러
@@ -454,8 +523,10 @@ class _LoginScreenState extends State<LoginScreen>
               _buildPrimaryButton('계정 만들기', Colors.cyan, Colors.blue),
               const SizedBox(height: 8),
 
-              Text('가입 시 데이터가 안전하게 저장됩니다',
-                style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+              Text(
+                '가입 시 데이터가 안전하게 저장됩니다',
+                style: TextStyle(color: Colors.grey[600], fontSize: 11),
+              ),
             ],
           ),
         ),
@@ -465,10 +536,20 @@ class _LoginScreenState extends State<LoginScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('이미 계정이 있으신가요?', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            Text(
+              '이미 계정이 있으신가요?',
+              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+            ),
             TextButton(
               onPressed: _toggleMode,
-              child: Text('로그인', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 13)),
+              child: Text(
+                '로그인',
+                style: TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ],
         ),
@@ -481,9 +562,11 @@ class _LoginScreenState extends State<LoginScreen>
         // 게스트 버튼
         _buildGuestButton(),
         const SizedBox(height: 10),
-        Text('⚠️ 게스트 계정은 앱 삭제 시 데이터가 사라집니다',
+        Text(
+          '⚠️ 게스트 계정은 앱 삭제 시 데이터가 사라집니다',
           style: TextStyle(fontSize: 11, color: Colors.orange[300]),
-          textAlign: TextAlign.center),
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 20),
         _buildPrivacyPolicyLink(),
       ],
@@ -522,11 +605,8 @@ class _LoginScreenState extends State<LoginScreen>
             child: Image.asset(
               _swordAsset,
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Icon(
-                Icons.shield,
-                size: size * 0.5,
-                color: _accentColor,
-              ),
+              errorBuilder: (_, __, ___) =>
+                  Icon(Icons.shield, size: size * 0.5, color: _accentColor),
             ),
           ),
         );
@@ -538,7 +618,12 @@ class _LoginScreenState extends State<LoginScreen>
   // 🎨 공통 위젯들
   // =====================================================
 
-  Widget _buildInputField(TextEditingController controller, String label, IconData icon, bool isPassword) {
+  Widget _buildInputField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+    bool isPassword,
+  ) {
     return TextField(
       controller: controller,
       obscureText: isPassword && _obscurePassword,
@@ -552,9 +637,11 @@ class _LoginScreenState extends State<LoginScreen>
             ? IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey[600], size: 20,
+                  color: Colors.grey[600],
+                  size: 20,
                 ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               )
             : null,
         enabledBorder: OutlineInputBorder(
@@ -563,11 +650,17 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: _accentColor.withOpacity(0.6), width: 1.5),
+          borderSide: BorderSide(
+            color: _accentColor.withOpacity(0.6),
+            width: 1.5,
+          ),
         ),
         filled: true,
         fillColor: const Color(0xFF1a1a30),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
     );
   }
@@ -581,7 +674,11 @@ class _LoginScreenState extends State<LoginScreen>
           gradient: LinearGradient(colors: [color1, color2]),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
-            BoxShadow(color: color1.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: color1.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: ElevatedButton(
@@ -589,9 +686,18 @@ class _LoginScreenState extends State<LoginScreen>
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
           ),
-          child: Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
         ),
       ),
     );
@@ -604,10 +710,15 @@ class _LoginScreenState extends State<LoginScreen>
       child: OutlinedButton.icon(
         onPressed: _isLoading ? null : _signInAsGuest,
         icon: Icon(Icons.person_outline, color: Colors.grey[400], size: 20),
-        label: Text('게스트로 시작하기', style: TextStyle(color: Colors.grey[400], fontSize: 14)),
+        label: Text(
+          '게스트로 시작하기',
+          style: TextStyle(color: Colors.grey[400], fontSize: 14),
+        ),
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: Colors.grey[700]!),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
     );
@@ -626,7 +737,12 @@ class _LoginScreenState extends State<LoginScreen>
         children: [
           const Icon(Icons.error_outline, color: Colors.red, size: 18),
           const SizedBox(width: 8),
-          Expanded(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 13))),
+          Expanded(
+            child: Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red, fontSize: 13),
+            ),
+          ),
         ],
       ),
     );
@@ -638,7 +754,10 @@ class _LoginScreenState extends State<LoginScreen>
         Expanded(child: Divider(color: Colors.grey[800])),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('또는', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+          child: Text(
+            '또는',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
         ),
         Expanded(child: Divider(color: Colors.grey[800])),
       ],
@@ -648,7 +767,9 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildPrivacyPolicyLink() {
     return GestureDetector(
       onTap: () async {
-        final uri = Uri.parse('https://sites.google.com/view/sword-game-privacy');
+        final uri = Uri.parse(
+          'https://sites.google.com/view/sword-game-privacy',
+        );
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
         }
@@ -673,9 +794,7 @@ class _LoginScreenState extends State<LoginScreen>
           center: const Alignment(0, -0.3),
           radius: 1.5,
           colors: [
-            _isLoginMode
-                ? const Color(0xFF2a1a3e)
-                : const Color(0xFF1a2a3e),
+            _isLoginMode ? const Color(0xFF2a1a3e) : const Color(0xFF1a2a3e),
             _bgTint,
             const Color(0xFF0a0a1a),
           ],
@@ -691,21 +810,34 @@ class _LoginScreenState extends State<LoginScreen>
 
 class _Particle {
   double x, y, speed, size, opacity;
-  _Particle({required this.x, required this.y, required this.speed, required this.size, required this.opacity});
+  _Particle({
+    required this.x,
+    required this.y,
+    required this.speed,
+    required this.size,
+    required this.opacity,
+  });
 }
 
 class _ParticlePainter extends CustomPainter {
   final List<_Particle> particles;
   final double progress;
   final Color tint;
-  _ParticlePainter({required this.particles, required this.progress, required this.tint});
+  _ParticlePainter({
+    required this.particles,
+    required this.progress,
+    required this.tint,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     for (final p in particles) {
       final y = (p.y + progress * p.speed) % 1.0;
       final x = p.x + sin(y * pi * 2 + p.speed) * 0.015;
-      final twinkle = (0.5 + sin(progress * pi * 2 + p.x * 8) * 0.5).clamp(0.0, 1.0);
+      final twinkle = (0.5 + sin(progress * pi * 2 + p.x * 8) * 0.5).clamp(
+        0.0,
+        1.0,
+      );
 
       canvas.drawCircle(
         Offset(x * size.width, (1 - y) * size.height),

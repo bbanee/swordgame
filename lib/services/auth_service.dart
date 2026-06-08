@@ -4,24 +4,24 @@ import 'package:flutter/foundation.dart';
 class AuthService {
   // Firebase Auth 인스턴스
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  
+
   // 싱글톤 패턴
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
   AuthService._internal();
-  
+
   // 현재 로그인된 사용자
   User? get currentUser => _auth.currentUser;
-  
+
   // 로그인 상태 확인
   bool get isLoggedIn => currentUser != null;
-  
+
   // 사용자 UID (계정 구분용 핵심!)
   String? get uid => currentUser?.uid;
-  
+
   // 인증 상태 변화 스트림
   Stream<User?> get authStateChanges => _auth.authStateChanges();
-  
+
   // ===== 이메일 회원가입 =====
   Future<AuthResult> signUpWithEmail({
     required String email,
@@ -39,7 +39,7 @@ class AuthService {
       return AuthResult.failure('회원가입 실패: $e');
     }
   }
-  
+
   // ===== 이메일 로그인 =====
   Future<AuthResult> signInWithEmail({
     required String email,
@@ -57,7 +57,7 @@ class AuthService {
       return AuthResult.failure('로그인 실패: $e');
     }
   }
-  
+
   // ===== 익명 로그인 (게스트) =====
   Future<AuthResult> signInAnonymously() async {
     try {
@@ -67,12 +67,12 @@ class AuthService {
       return AuthResult.failure('게스트 로그인 실패: $e');
     }
   }
-  
+
   // ===== 로그아웃 =====
   Future<void> signOut() async {
     await _auth.signOut();
   }
-  
+
   // ===== 비밀번호 재설정 이메일 =====
   Future<AuthResult> sendPasswordResetEmail(String email) async {
     try {
@@ -84,7 +84,7 @@ class AuthService {
       return AuthResult.failure('이메일 전송 실패: $e');
     }
   }
-  
+
   // ===== 재인증 (이메일/비밀번호) =====
   Future<AuthResult> reauthenticateWithEmail({
     required String email,
@@ -93,7 +93,7 @@ class AuthService {
     try {
       final user = currentUser;
       if (user == null) return AuthResult.failure('로그인이 필요합니다');
-      
+
       final credential = EmailAuthProvider.credential(
         email: email,
         password: password,
@@ -106,7 +106,7 @@ class AuthService {
       return AuthResult.failure('재인증 실패: $e');
     }
   }
-  
+
   // ===== 계정 삭제 =====
   Future<AuthResult> deleteAccount() async {
     try {
@@ -114,7 +114,7 @@ class AuthService {
       return AuthResult.success(null, message: '계정이 삭제되었습니다');
     } on FirebaseAuthException catch (e) {
       if (e.code == 'requires-recent-login') {
-        return AuthResult.failure('REQUIRES_RECENT_LOGIN');  // 특수 코드
+        return AuthResult.failure('REQUIRES_RECENT_LOGIN'); // 특수 코드
       }
       return AuthResult.failure(_getErrorMessage(e.code));
     } catch (e) {
@@ -125,7 +125,7 @@ class AuthService {
       return AuthResult.failure('계정 삭제 실패: $e');
     }
   }
-  
+
   // 에러 메시지 한글화
   String _getErrorMessage(String code) {
     switch (code) {
@@ -157,18 +157,18 @@ class AuthResult {
   final User? user;
   final String? errorMessage;
   final String? message;
-  
+
   AuthResult._({
     required this.isSuccess,
     this.user,
     this.errorMessage,
     this.message,
   });
-  
+
   factory AuthResult.success(User? user, {String? message}) {
     return AuthResult._(isSuccess: true, user: user, message: message);
   }
-  
+
   factory AuthResult.failure(String error) {
     return AuthResult._(isSuccess: false, errorMessage: error);
   }

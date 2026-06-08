@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../data/swords.dart';
 import '../models/owned_sword.dart';
 import '../models/battle_record.dart';
 import '../models/daily_quest.dart';
@@ -256,6 +257,7 @@ class StorageService {
         'titleId': _cache['equippedTitle'] ?? 't_01',
         'totalBattle': _cache['totalBattle'] ?? 0,
         'totalBattleWin': _cache['totalBattleWin'] ?? 0,
+        'infiniteTowerBestFloor': _cache['infiniteTowerBestFloor'] ?? 0,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       debugPrint('✅ users_public 프로필 동기화 완료');
@@ -464,6 +466,11 @@ class StorageService {
       'battleRefillCount': 0,
       'battleWinStreak': 0,
       'maxWinStreak': 0,
+      'infiniteTowerBestFloor': 0,
+      'infiniteTowerDailyPlaysUsed': 0,
+      'infiniteTowerAdPlaysUsed': 0,
+      'infiniteTowerPlayResetDate': null,
+      'infiniteTowerFirstClearFloors': <int>[],
       'lastBattleReset': null,
       'battleRecords': [],
       'bossCooldowns': {},
@@ -563,7 +570,7 @@ class StorageService {
   // 친구/랭킹용 검 정보
   String? get equippedSwordId => _get<String?>('equippedSwordId', null);
   set equippedSwordId(String? value) => _set('equippedSwordId', value);
-  
+
   int get equippedSwordLevel => _get<int>('equippedSwordLevel', 1);
   set equippedSwordLevel(int value) => _set('equippedSwordLevel', value);
 
@@ -606,6 +613,35 @@ class StorageService {
 
   int get maxWinStreak => _get<int>('maxWinStreak', 0);
   set maxWinStreak(int value) => _set('maxWinStreak', value);
+
+  int get infiniteTowerBestFloor => _get<int>('infiniteTowerBestFloor', 0);
+  set infiniteTowerBestFloor(int value) =>
+      _set('infiniteTowerBestFloor', value);
+
+  int get infiniteTowerDailyPlaysUsed =>
+      _get<int>('infiniteTowerDailyPlaysUsed', 0);
+  set infiniteTowerDailyPlaysUsed(int value) =>
+      _set('infiniteTowerDailyPlaysUsed', value);
+
+  int get infiniteTowerAdPlaysUsed => _get<int>('infiniteTowerAdPlaysUsed', 0);
+  set infiniteTowerAdPlaysUsed(int value) =>
+      _set('infiniteTowerAdPlaysUsed', value);
+
+  String? get infiniteTowerPlayResetDate =>
+      _get<String?>('infiniteTowerPlayResetDate', null);
+  set infiniteTowerPlayResetDate(String? value) =>
+      _set('infiniteTowerPlayResetDate', value);
+
+  Set<int> get infiniteTowerFirstClearFloors {
+    final list = _get<List<dynamic>>('infiniteTowerFirstClearFloors', []);
+    return list
+        .map((e) => e is num ? e.toInt() : int.tryParse(e.toString()) ?? 0)
+        .where((e) => e > 0)
+        .toSet();
+  }
+
+  set infiniteTowerFirstClearFloors(Set<int> value) =>
+      _set('infiniteTowerFirstClearFloors', value.toList()..sort());
 
   DateTime? get lastBattleReset {
     final value = _cache['lastBattleReset'];
@@ -664,7 +700,11 @@ class StorageService {
   // ============================================================
   Set<String> get codex {
     final list = _get<List<dynamic>>('codex', []);
-    return list.map((e) => e.toString()).toSet();
+    final activeIds = allSwords.map((s) => s.id).toSet();
+    return list
+        .map((e) => resolveSwordDataId(e.toString()))
+        .where(activeIds.contains)
+        .toSet();
   }
 
   set codex(Set<String> value) => _set('codex', value.toList());

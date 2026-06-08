@@ -57,10 +57,7 @@ class OwnedSword {
       final dataId = json['dataId'] as String? ?? '';
 
       // ✅ 검 데이터 안전하게 찾기
-      final data = allSwords.firstWhere(
-        (s) => s.id == dataId,
-        orElse: () => allSwords.first, // ✅ 없으면 첫 번째 검 사용
-      );
+      final data = getSwordById(dataId);
 
       return OwnedSword(
         uid:

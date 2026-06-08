@@ -1,4 +1,4 @@
-﻿// lib/services/ad_service.dart
+// lib/services/ad_service.dart
 // 🎬 AdMob 광고 서비스
 
 import 'dart:io';
@@ -8,12 +8,14 @@ import 'storage_service.dart';
 
 /// 광고 유형
 enum AdRewardType {
-  destroyRevive,     // 파괴 복구
-  bossSkip,          // 보스 쿨다운 스킵
-  sellBonus,         // 판매 2배
-  stoneReward,       // 강화석 획득
-  attendanceBonus,   // 출석 보상 2배
-  freeGacha,         // 일일 무료 고급 뽑기
+  destroyRevive, // 파괴 복구
+  bossSkip, // 보스 쿨다운 스킵
+  sellBonus, // 판매 2배
+  stoneReward, // 강화석 획득
+  attendanceBonus, // 출석 보상 2배
+  freeGacha, // 일일 무료 고급 뽑기
+  minigamePlay, // 미니게임 추가 플레이 (무제한)
+  infiniteTowerPlay, // 무한의 탑 추가 도전
 }
 
 class AdService {
@@ -24,7 +26,7 @@ class AdService {
   RewardedAd? _rewardedAd;
   bool _isLoading = false;
   bool _isInitialized = false;
-  
+
   // 일일 광고 시청 횟수
   Map<AdRewardType, int> _dailyAdCounts = {};
   DateTime? _lastResetDate;
@@ -32,7 +34,7 @@ class AdService {
   // =====================================================
   // 광고 단위 ID
   // =====================================================
-  
+
   /// 🧪 테스트 광고 ID (개발 중에는 이것 사용!)
   static String get _testRewardedAdUnitId {
     if (Platform.isAndroid) {
@@ -44,13 +46,15 @@ class AdService {
   }
 
   /// 🚀 실제 광고 ID (출시 시 여기에 실제 ID 입력!)
-  static const String _realAndroidAdUnitId = 'ca-app-pub-4392701551381492/1283432434';  
-  static const String _realIosAdUnitId = 'ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX';
-  
+  static const String _realAndroidAdUnitId =
+      'ca-app-pub-4392701551381492/1283432434';
+  static const String _realIosAdUnitId =
+      'ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX';
+
   /// 현재 사용할 광고 ID
   static String get rewardedAdUnitId {
     // 🔥 출시 시 kReleaseMode를 확인하여 실제 ID 사용
-    
+
     if (kReleaseMode) {
       // 출시 모드
       if (Platform.isAndroid) {
@@ -59,7 +63,7 @@ class AdService {
         return _realIosAdUnitId;
       }
     }
-    
+
     // 개발 모드 - 테스트 ID 사용
     return _testRewardedAdUnitId;
   }
@@ -67,14 +71,16 @@ class AdService {
   // =====================================================
   // 일일 광고 제한
   // =====================================================
-  
+
   static const Map<AdRewardType, int> _dailyLimits = {
-    AdRewardType.destroyRevive: 3,      // 파괴 복구: 3회
-    AdRewardType.bossSkip: 3,           // 보스 쿨다운: 3회
-    AdRewardType.sellBonus: 5,          // 판매 2배: 5회
-    AdRewardType.stoneReward: 3,        // 강화석: 3회
-    AdRewardType.attendanceBonus: 1,    // 출석 2배: 1회
-    AdRewardType.freeGacha: 1,          // 무료 고급 뽑기: 1회
+    AdRewardType.destroyRevive: 3, // 파괴 복구: 3회
+    AdRewardType.bossSkip: 3, // 보스 쿨다운: 3회
+    AdRewardType.sellBonus: 5, // 판매 2배: 5회
+    AdRewardType.stoneReward: 3, // 강화석: 3회
+    AdRewardType.attendanceBonus: 1, // 출석 2배: 1회
+    AdRewardType.freeGacha: 1, // 무료 고급 뽑기: 1회
+    AdRewardType.minigamePlay: 999, // 미니게임 추가 플레이: 사실상 무제한
+    AdRewardType.infiniteTowerPlay: 3, // 무한의 탑 추가 도전: 3회
   };
 
   // =====================================================
@@ -84,14 +90,14 @@ class AdService {
   /// AdMob 초기화
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
+
     try {
       await MobileAds.instance.initialize();
       _isInitialized = true;
-      
+
       // 광고 미리 로드
       loadRewardedAd();
-      
+
       debugPrint('✅ AdMob 초기화 완료');
     } catch (e) {
       debugPrint('❌ AdMob 초기화 실패: $e');
@@ -105,9 +111,9 @@ class AdService {
   /// 보상형 광고 로드
   void loadRewardedAd() {
     if (_isLoading || _rewardedAd != null) return;
-    
+
     _isLoading = true;
-    
+
     RewardedAd.load(
       adUnitId: rewardedAdUnitId,
       request: const AdRequest(),
@@ -170,7 +176,7 @@ class AdService {
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         _rewardedAd = null;
-        loadRewardedAd();  // 다음 광고 미리 로드
+        loadRewardedAd(); // 다음 광고 미리 로드
         onAdClosed?.call();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
@@ -185,13 +191,13 @@ class AdService {
     await _rewardedAd!.show(
       onUserEarnedReward: (ad, reward) {
         rewarded = true;
-        
+
         // 일일 광고 횟수 증가
         _incrementAdCount(type);
-        
+
         // 보상 지급
         onRewarded();
-        
+
         debugPrint('🎁 보상 획득: ${type.name}');
       },
     );
@@ -208,7 +214,7 @@ class AdService {
     final storage = StorageService();
     final now = storage.serverNow;
     final today = DateTime(now.year, now.month, now.day);
-    
+
     if (_lastResetDate == null || _lastResetDate!.isBefore(today)) {
       // 날짜가 바뀌면 리셋
       _dailyAdCounts = {};
@@ -250,10 +256,10 @@ class AdService {
     if (resetDateStr != null) {
       _lastResetDate = DateTime.tryParse(resetDateStr);
     }
-    
+
     // 리셋 체크
     _checkDailyReset();
-    
+
     // 횟수 로드
     final countMap = storage.adDailyCounts;
     for (final type in AdRewardType.values) {
@@ -268,12 +274,22 @@ class AdService {
   /// 광고 타입별 한글 이름
   static String getAdTypeName(AdRewardType type) {
     switch (type) {
-      case AdRewardType.destroyRevive: return '파괴 복구';
-      case AdRewardType.bossSkip: return '보스 쿨다운 스킵';
-      case AdRewardType.sellBonus: return '판매 2배';
-      case AdRewardType.stoneReward: return '강화석 획득';
-      case AdRewardType.attendanceBonus: return '출석 보상 2배';
-      case AdRewardType.freeGacha: return '무료 고급 뽑기';
+      case AdRewardType.destroyRevive:
+        return '파괴 복구';
+      case AdRewardType.bossSkip:
+        return '보스 쿨다운 스킵';
+      case AdRewardType.sellBonus:
+        return '판매 2배';
+      case AdRewardType.stoneReward:
+        return '강화석 획득';
+      case AdRewardType.attendanceBonus:
+        return '출석 보상 2배';
+      case AdRewardType.freeGacha:
+        return '무료 고급 뽑기';
+      case AdRewardType.minigamePlay:
+        return '미니게임 추가 플레이';
+      case AdRewardType.infiniteTowerPlay:
+        return '무한의 탑 추가 도전';
     }
   }
 
@@ -298,4 +314,3 @@ class AdService {
     debugPrint('✅ 유저별 광고 횟수 로드 완료 (Firestore)');
   }
 }
-

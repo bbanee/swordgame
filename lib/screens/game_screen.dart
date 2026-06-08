@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import 'dart:math';
 import '../enums/sword_grade.dart';
 import '../enums/element.dart';
 import '../enums/quest_type.dart';
 import '../enums/skill_type.dart';
-import '../enums/skill_effect.dart';
 import '../models/sword_data.dart';
 import '../models/owned_sword.dart';
 import '../models/battle_record.dart';
@@ -17,15 +14,14 @@ import '../models/title_data.dart';
 import '../models/player_profile.dart';
 import '../data/swords.dart';
 import '../data/titles.dart';
-import '../data/bosses.dart';
 import '../data/npcs.dart';
 import '../data/shop.dart';
 import '../services/storage_service.dart';
 import '../services/online_player_service.dart';
 import '../services/ad_service.dart';
 import '../services/sound_service.dart';
-import '../services/friend_service.dart'; // 👥 친구 서비스
-import '../services/purchase_service.dart'; // 💰 인앱 결제
+import '../services/friend_service.dart'; // ?뫁 移쒓뎄 ?쒕퉬??
+import '../services/purchase_service.dart'; // ?뮥 ?몄빋 寃곗젣
 import '../services/remote_config_service.dart';
 import '../services/event_log_service.dart';
 import '../utils/constants.dart';
@@ -33,34 +29,50 @@ import '../utils/helpers.dart';
 import '../utils/battle_engine.dart';
 import 'boss_raid_screen.dart';
 import 'shop_screen.dart';
+import 'season1_boss_select_dialog.dart';
+import 'season1_settings_dialog.dart';
 import 'battle_select_screen.dart';
 import 'battle_arena_screen.dart';
 import 'achievements_screen.dart';
 import 'season_pass_screen.dart';
-import 'friends_screen.dart'; // 👥 친구 화면
+import 'friends_screen.dart'; // ?뫁 移쒓뎄 ?붾㈃
 import '../models/achievement_data.dart';
 import '../data/achievements.dart';
 import '../data/season_pass_rewards.dart';
 import '../widgets/dialogs/sword_detail_dialog.dart';
 import '../widgets/dialogs/synthesis_dialog.dart';
+import '../widgets/dialogs/season1_ranking_dialog.dart';
+import '../widgets/dialogs/sword_image_test_dialog.dart';
 import '../widgets/sword_image_widget.dart';
 import '../services/auth_service.dart';
-import '../services/analytics_service.dart'; // 📊 Analytics
+import '../services/analytics_service.dart'; // ?뱤 Analytics
 import 'tabs/home_tab.dart';
 import 'tabs/inventory_tab.dart';
 import 'tabs/enhance_tab.dart';
 import 'tabs/battle_tab.dart';
 import 'tabs/more_tab.dart';
+import 'minigame/brick_breaker_screen.dart';
+import 'infinite_tower_screen.dart';
+part 'game_screen/gacha_dialog.dart';
+part 'game_screen/image_shell.dart';
+
+String _formatCompactBalance(int value) {
+  if (value < 0) return '0';
+  if (value >= 1000000000) return '${(value / 1000000000).round()}B';
+  if (value >= 1000000) return '${(value / 1000000).round()}M';
+  if (value >= 1000) return '${(value / 1000).round()}K';
+  return '$value';
+}
 
 // game_screen.dart
 class GameScreen extends StatefulWidget {
   final String nickname;
-  final String userId; // ✅ 추가
+  final String userId; // ??異붽?
 
   const GameScreen({
     super.key,
     required this.nickname,
-    required this.userId, // ✅ 추가
+    required this.userId, // ??異붽?
   });
 
   @override
@@ -70,63 +82,63 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   final _storage = StorageService();
-  final _purchaseService = PurchaseService(); // 💰 시즌패스 인앱 결제용
+  final _purchaseService = PurchaseService(); // ?뮥 ?쒖쫵?⑥뒪 ?몄빋 寃곗젣??
   final _random = Random();
 
-  // 현재 탭
+  // ?꾩옱 ??
   int _currentTab = 0;
 
-  // 재화
+  // ?ы솕
   int _gold = 0;
   int _diamond = 0;
   int _enhanceStone = 0;
   int _bossCore = 0;
 
-  // 인벤토리
+  // ?몃깽?좊━
   List<OwnedSword> _inventory = [];
   int _maxInventory = 10;
   OwnedSword? _equippedSword;
 
-  // 배틀
+  // 諛고?
   int _battleCount = 10;
   int _battleRefillCount = 0;
   int _battleWinStreak = 0;
   int _maxWinStreak = 0;
   List<BattleRecord> _battleRecords = [];
 
-  // 보스 쿨다운
+  // 蹂댁뒪 荑⑤떎??
   Map<String, DateTime> _bossCooldowns = {};
 
-  // 도감/칭호/업적
+  // ?꾧컧/移?샇/?낆쟻
   Set<String> _codex = {};
   Set<String> _unlockedTitles = {'t_01'};
   String _equippedTitle = 't_01';
   Set<String> _unlockedAchievements = {};
   Set<String> _claimedAchievements = {};
 
-  // 출석
+  // 異쒖꽍
   int _attendanceStreak = 0;
   DateTime? _lastAttendance;
   bool _canCheckAttendance = true;
 
-  // 일일퀘스트
+  // ?쇱씪?섏뒪??
   List<DailyQuest> _dailyQuests = [];
 
-  // 시즌패스
+  // ?쒖쫵?⑥뒪
   int _seasonPassLevel = 1;
   int _seasonPassExp = 0;
-  int _todaySeasonExp = 0; // ✅ 추가: 오늘 획득한 시즌패스 EXP
-  static const int _maxDailySeasonExp = 300; // ✅ 추가: 하루 상한
+  int _todaySeasonExp = 0; // ??異붽?: ?ㅻ뒛 ?띾뱷???쒖쫵?⑥뒪 EXP
+  static const int _maxDailySeasonExp = 300; // ??異붽?: ?섎（ ?곹븳
   Set<int> _claimedSeasonRewards = {};
-  bool _hasPremiumPass = false; // ✅ 추가
-  Set<int> _claimedPremiumRewards = {}; // ✅ 추가
+  bool _hasPremiumPass = false; // ??異붽?
+  Set<int> _claimedPremiumRewards = {}; // ??異붽?
 
-  // 합성 천장
-  int _normalToRarePity = 0; // ✅ 노말→레어 천장 추가
+  // ?⑹꽦 泥쒖옣
+  int _normalToRarePity = 0; // ???몃쭚?믩젅??泥쒖옣 異붽?
   int _rareToUniquePity = 0;
   int _uniqueToLegendPity = 0;
 
-  // 통계
+  // ?듦퀎
   int _totalEnhanceAttempts = 0;
   int _totalEnhanceSuccess = 0;
   int _totalEnhanceFail = 0;
@@ -141,81 +153,83 @@ class _GameScreenState extends State<GameScreen>
   int _bossKills = 0;
   int _totalRevengeWins = 0;
   int _totalStoneUsed = 0;
-  int _totalQuestsCompleted = 0; // ✅ 추가
+  int _totalQuestsCompleted = 0; // ??異붽?
 
-  // 🔥 판매 이벤트 시스템
-  int _currentSellEventIndex = 0; // 현재 이벤트 인덱스
-  DateTime? _lastEventChange; // 마지막 이벤트 변경 시간
+  // ?뵦 ?먮ℓ ?대깽???쒖뒪??
+  int _currentSellEventIndex = 0; // ?꾩옱 ?대깽???몃뜳??
+  DateTime? _lastEventChange; // 留덉?留??대깽??蹂寃??쒓컙
 
-  // 판매 이벤트 목록 (이름, 배율, 색상, 이모지)
+  // ?먮ℓ ?대깽??紐⑸줉 (?대쫫, 諛곗쑉, ?됱긽, ?대え吏)
   static const List<Map<String, dynamic>> _sellEvents = [
     {'name': '일반', 'rate': 1.0, 'color': 0xFFFFFFFF, 'emoji': '💰'},
     {'name': '폭등', 'rate': 2.0, 'color': 0xFF4CAF50, 'emoji': '📈'},
     {'name': '대폭등', 'rate': 3.0, 'color': 0xFF00E676, 'emoji': '🚀'},
-    {'name': '버블', 'rate': 4.0, 'color': 0xFFFFD700, 'emoji': '🫧'},
-    {'name': '황금시대', 'rate': 5.0, 'color': 0xFFFF9800, 'emoji': '👑'},
+    {'name': '버블', 'rate': 4.0, 'color': 0xFFFFD700, 'emoji': '✨'},
+    {'name': '황금 찬스', 'rate': 5.0, 'color': 0xFFFF9800, 'emoji': '👑'},
     {'name': '폭락', 'rate': 0.5, 'color': 0xFFF44336, 'emoji': '📉'},
     {'name': '대폭락', 'rate': 0.3, 'color': 0xFFD32F2F, 'emoji': '💥'},
     {'name': '불경기', 'rate': 0.2, 'color': 0xFF9E9E9E, 'emoji': '😰'},
     {'name': '호황', 'rate': 2.5, 'color': 0xFF2196F3, 'emoji': '🎉'},
   ];
 
-  // 랭킹
+  // ??궧
   List<Map<String, dynamic>> _rankings = [];
   List<Map<String, dynamic>> _battleRankings = [];
+  List<Map<String, dynamic>> _towerRankings = [];
+  List<PlayerProfile> _codexRankings = [];
   int _myRank = 0;
   int _myBattleRank = 0;
 
-  // UI 상태
+  // UI ?곹깭
   bool _useEnhanceStone = false;
-  bool _showEnhanceEffect = false; // 🔥 강화 성공 애니메이션
+  bool _showEnhanceEffect = false; // ?뵦 媛뺥솕 ?깃났 ?좊땲硫붿씠??
   bool _isDestroyRecoveryInProgress = false;
   String? _notification;
-  String? _notificationImage; // 알림에 표시할 에셋 이미지 경로
+  String? _notificationImage; // ?뚮┝???쒖떆???먯뀑 ?대?吏 寃쎈줈
 
-  // ✅ 데이터 로딩 완료 여부 (로드 완료 전 조작/저장으로 서버 덮어쓰기 방지)
+  // ???곗씠??濡쒕뵫 ?꾨즺 ?щ? (濡쒕뱶 ?꾨즺 ??議곗옉/??μ쑝濡??쒕쾭 ??뼱?곌린 諛⑹?)
   bool _dataReady = false;
   bool _deferredSaveAfterLoad = false;
   bool _snapshotLogged = false;
 
-  // ✅ 로딩 타임아웃(10초) 및 재시도 UI
+  // ??濡쒕뵫 ??꾩븘??10珥? 諛??ъ떆??UI
   Timer? _loadTimeoutTimer;
   bool _loadTimedOut = false;
   bool _loadingInProgress = false;
   int _loadGeneration = 0;
 
-  // 친구 목록 (오프라인 모드에서는 빈 리스트)
-  List<String> _friendIds = []; // ✅ 추가
+  // 移쒓뎄 紐⑸줉 (?ㅽ봽?쇱씤 紐⑤뱶?먯꽌??鍮?由ъ뒪??
+  List<String> _friendIds = []; // ??異붽?
 
-  // ✅ 온라인 서비스 추가
+  // ???⑤씪???쒕퉬??異붽?
   OnlinePlayerService? _onlineService;
   List<PlayerProfile> _onlineRankings = [];
   bool _isOnline = false;
 
-  // ✅ 공지 팝업(세션 1회 체크)
+  // ??怨듭? ?앹뾽(?몄뀡 1??泥댄겕)
   bool _noticeCheckedThisSession = false;
   final _remoteConfig = RemoteConfigService();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this); // 🔥 앱 라이프사이클 감지
+    WidgetsBinding.instance.addObserver(this); // ?뵦 ???쇱씠?꾩궗?댄겢 媛먯?
     _loadGameData();
     _initOnlineService();
-    _initPurchaseService(); // 💰 결제 서비스 초기화
+    _initPurchaseService(); // ?뮥 寃곗젣 ?쒕퉬??珥덇린??
 
-    // 🎵 메인 BGM 재생
+    // ?렦 硫붿씤 BGM ?ъ깮
     SoundService().playMainBgm();
   }
 
   @override
   void dispose() {
     _loadTimeoutTimer?.cancel();
-    WidgetsBinding.instance.removeObserver(this); // 🔥 옵저버 해제
+    WidgetsBinding.instance.removeObserver(this); // ?뵦 ?듭?踰??댁젣
     super.dispose();
   }
 
-  // 🔥 앱 라이프사이클 변경 감지 - 백그라운드/종료 시 즉시 저장
+  // ?뵦 ???쇱씠?꾩궗?댄겢 蹂寃?媛먯? - 諛깃렇?쇱슫??醫낅즺 ??利됱떆 ???
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
@@ -223,35 +237,35 @@ class _GameScreenState extends State<GameScreen>
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
-      // 🔥 앱이 백그라운드로 가거나 종료될 때 즉시 저장 (force=true로 디바운싱 무시)
-      debugPrint('📱 앱 상태 변경: $state - 데이터 저장 중...');
+      // ?뵦 ?깆씠 諛깃렇?쇱슫?쒕줈 媛嫄곕굹 醫낅즺????利됱떆 ???(force=true濡??붾컮?댁떛 臾댁떆)
+      debugPrint('app lifecycle changed: $state, saving data...');
 
-      // ✅ 로딩 중/로드 실패 상태에서 클라우드 저장을 하면 초기값이 서버를 덮어쓸 수 있어 차단
+      // ??濡쒕뵫 以?濡쒕뱶 ?ㅽ뙣 ?곹깭?먯꽌 ?대씪?곕뱶 ??μ쓣 ?섎㈃ 珥덇린媛믪씠 ?쒕쾭瑜???뼱?????덉뼱 李⑤떒
       if (_dataReady) {
-        // 현재 UI 상태 → Storage 캐시에 먼저 반영 (클라우드 저장 전에 스냅샷 정합성 확보)
+        // ?꾩옱 UI ?곹깭 ??Storage 罹먯떆??癒쇱? 諛섏쁺 (?대씪?곕뱶 ????꾩뿉 ?ㅻ깄???뺥빀???뺣낫)
         _saveGameData(cloudSave: false);
 
         if (_storage.canSaveToCloudSafely) {
           _storage.saveToCloud(force: true);
         } else {
-          // 클라우드 기준 데이터가 준비되지 않았으면 로컬 백업만 저장
+          // ?대씪?곕뱶 湲곗? ?곗씠?곌? 以鍮꾨릺吏 ?딆븯?쇰㈃ 濡쒖뺄 諛깆뾽留????
           _storage.saveToLocalBackupNow();
         }
       } else {
-        // 로딩 중에는 서버 덮어쓰기 위험 → 로컬만
+        // 濡쒕뵫 以묒뿉???쒕쾭 ??뼱?곌린 ?꾪뿕 ??濡쒖뺄留?
         _storage.saveToLocalBackupNow();
       }
 
-      // 🔇 백그라운드에서 BGM 일시정지
+      // ?뵁 諛깃렇?쇱슫?쒖뿉??BGM ?쇱떆?뺤?
       SoundService().pauseBgm();
     } else if (state == AppLifecycleState.resumed) {
-      // 🔊 포그라운드 복귀 시 BGM 재개
-      debugPrint('📱 앱 복귀 - BGM 재개');
+      // ?뵄 ?ш렇?쇱슫??蹂듦? ??BGM ?ш컻
+      debugPrint('app resumed, restarting BGM');
       SoundService().resumeBgm();
     }
   }
 
-  // 💰 결제 서비스 초기화 (시즌패스 구매용)
+  // ?뮥 寃곗젣 ?쒕퉬??珥덇린??(?쒖쫵?⑥뒪 援щℓ??
   void _initPurchaseService() {
     _purchaseService.onPurchaseComplete = (result) {
       EventLogService().logPurchase(
@@ -265,63 +279,63 @@ class _GameScreenState extends State<GameScreen>
       if (result.success && result.isPremiumPass) {
         setState(() {
           _hasPremiumPass = true;
-          _showNotification('👑 프리미엄 패스가 활성화되었습니다!');
+          _showNotification('프리미엄 패스가 활성화되었습니다!');
           _saveGameData();
         });
       } else if (!result.success) {
-        _showNotification('❌ ${result.errorMessage ?? "구매 실패"}');
+        _showNotification(result.errorMessage ?? '결제 실패');
       }
     };
     _purchaseService.onPurchaseError = (error) {
-      _showNotification('❌ 결제 오류: $error');
+      _showNotification('결제 오류: $error');
     };
     _purchaseService.onPurchasePending = () {
-      _showNotification('⏳ 결제 처리 중...');
+      _showNotification('결제 처리 중...');
     };
   }
 
-  // ✅ 온라인 서비스 초기화
+  // ???⑤씪???쒕퉬??珥덇린??
   Future<void> _initOnlineService() async {
     try {
-      // ✅ Firebase Auth uid 직접 사용 (widget.userId 대신)
+      // ??Firebase Auth uid 吏곸젒 ?ъ슜 (widget.userId ???
       final authUid = AuthService().uid;
       if (authUid == null || authUid.isEmpty) {
-        debugPrint('❌ Firebase Auth uid가 없음 - 오프라인 모드');
+        debugPrint('Firebase Auth uid is missing; offline mode');
         _isOnline = false;
         return;
       }
 
       _onlineService = OnlinePlayerService(myUserId: authUid);
       _isOnline = true;
-      debugPrint('✅ 온라인 서비스 초기화: $authUid');
+      debugPrint('online service initialized: $authUid');
 
       await _syncMyProfile();
       await _fetchOnlineRankings();
-      await _fetchBattleNotifications(); // 배틀 알림 수신
+      await _fetchBattleNotifications(); // 諛고? ?뚮┝ ?섏떊
     } catch (e) {
-      // Firebase 없으면 오프라인 모드
+      // Firebase ?놁쑝硫??ㅽ봽?쇱씤 紐⑤뱶
       _isOnline = false;
-      debugPrint('오프라인 모드: $e');
+      debugPrint('offline mode: $e');
     }
   }
 
-  // ✅ 배틀 알림 수신 및 기록 추가
+  // ??諛고? ?뚮┝ ?섏떊 諛?湲곕줉 異붽?
   Future<void> _fetchBattleNotifications() async {
     if (_onlineService == null) {
-      debugPrint('❌ 배틀 알림 수신 실패: onlineService가 null');
+      debugPrint('battle notification fetch failed: onlineService is null');
       return;
     }
 
     try {
-      debugPrint('🔄 배틀 알림 가져오기 시작...');
+      debugPrint('fetching battle notifications...');
       final notifications = await _onlineService!.fetchBattleNotifications();
-      debugPrint('📬 배틀 알림 ${notifications.length}개 수신됨');
+      debugPrint('battle notifications fetched: ${notifications.length}');
 
       int addedCount = 0;
       for (final noti in notifications) {
-        // 안전한 데이터 추출
+        // ?덉쟾???곗씠??異붿텧
         final fromUserId = (noti['fromUserId'] as String?) ?? '';
-        final fromNickname = (noti['fromNickname'] as String?) ?? '알 수 없음';
+        final fromNickname = (noti['fromNickname'] as String?) ?? '?????놁쓬';
         final fromLevel = (noti['fromLevel'] as int?) ?? 1;
         final fromGrade = (noti['fromGrade'] as String?) ?? 'normal';
         final fromElement = (noti['fromElement'] as String?) ?? 'fire';
@@ -331,28 +345,28 @@ class _GameScreenState extends State<GameScreen>
         final timestamp = (noti['timestamp'] as DateTime?) ?? DateTime.now();
 
         debugPrint(
-          '  - 알림: $fromNickname(Lv.$fromLevel) → 나, 내가 ${toWon ? "이김" : "짐"}',
+          '  - battle: $fromNickname(Lv.$fromLevel) vs me ${toWon ? "win" : "lose"}',
         );
 
         if (fromUserId.isEmpty) {
-          debugPrint('    ⚠️ fromUserId가 비어있어서 스킵');
+          debugPrint('    skipped: empty fromUserId');
           continue;
         }
 
-        // ✅ 문서 ID로 중복 체크 (더 정확함)
+        // ??臾몄꽌 ID濡?以묐났 泥댄겕 (???뺥솗??
         final notiId = noti['id'] as String?;
         final exists =
             notiId != null && _battleRecords.any((r) => r.uid == notiId);
 
         if (exists) {
-          debugPrint('    ⚠️ 이미 존재하는 기록, 스킵');
+          debugPrint('    skipped: duplicate record');
           continue;
         }
 
         _battleRecords.insert(
           0,
           BattleRecord(
-            uid: notiId ?? generateUid(), // 문서 ID를 uid로 사용
+            uid: notiId ?? generateUid(), // 臾몄꽌 ID瑜?uid濡??ъ슜
             opponentId: fromUserId,
             opponentName: fromNickname,
             myLevel: toLevel,
@@ -366,29 +380,29 @@ class _GameScreenState extends State<GameScreen>
             goldEarned: 0,
             isRevengeable: !toWon,
             logs: [],
-            isAttacker: false, // 내가 공격당함
+            isAttacker: false, // ?닿? 怨듦꺽?뱁븿
           ),
         );
         addedCount++;
-        debugPrint('    ✅ 배틀 기록 추가됨');
+        debugPrint('    battle history added');
       }
 
       if (addedCount > 0) {
-        // 시간순 정렬
+        // ?쒓컙???뺣젹
         _battleRecords.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         _saveGameData();
 
         if (mounted) {
-          setState(() {}); // UI 갱신
-          _showNotification('⚔️ $addedCount건의 배틀 기록이 도착했습니다!');
+          setState(() {}); // UI 媛깆떊
+          _showNotification('$addedCount건의 배틀 기록을 가져왔습니다!');
         }
       }
     } catch (e) {
-      debugPrint('❌ 배틀 알림 수신 실패: $e');
+      debugPrint('battle notification fetch failed: $e');
     }
   }
 
-  // ✅ 내 프로필 서버 동기화
+  // ?????꾨줈???쒕쾭 ?숆린??
   Future<void> _syncMyProfile() async {
     if (!_isOnline || _onlineService == null || _equippedSword == null) return;
 
@@ -401,14 +415,17 @@ class _GameScreenState extends State<GameScreen>
         swordBreakthroughLevel: _equippedSword!.breakthroughLevel,
         titleId: _equippedTitle,
         updatedAt: DateTime.now(),
+        totalBattle: _totalBattle,
+        totalBattleWin: _totalBattleWin,
+        codexCount: _codex.length,
       );
       await _onlineService!.upsertMe(profile);
     } catch (e) {
-      debugPrint('프로필 동기화 실패: $e');
+      debugPrint('profile sync failed: $e');
     }
   }
 
-  // ✅ 온라인 랭킹 가져오기
+  // ???⑤씪????궧 媛?몄삤湲?
   Future<void> _fetchOnlineRankings({bool forceRefresh = false}) async {
     if (!_isOnline || _onlineService == null) return;
 
@@ -417,22 +434,107 @@ class _GameScreenState extends State<GameScreen>
         limit: 100,
         forceRefresh: forceRefresh,
       );
-      _updateRankings(); // 로컬 랭킹과 병합
+      _updateRankings(); // 濡쒖뺄 ??궧怨?蹂묓빀
     } catch (e) {
-      debugPrint('랭킹 조회 실패: $e');
+      debugPrint('ranking fetch failed: $e');
     }
   }
 
-  // 전투력 계산
+  Future<void> _fetchExtendedRankings({bool forceRefresh = false}) async {
+    await _fetchOnlineRankings(forceRefresh: forceRefresh);
+
+    if (_isOnline && _onlineService != null) {
+      try {
+        _towerRankings = await _onlineService!.fetchInfiniteTowerRankings(
+          limit: 100,
+        );
+      } catch (e) {
+        debugPrint('tower ranking fetch failed: $e');
+      }
+
+      try {
+        _codexRankings = await _onlineService!.fetchCodexRankings(limit: 100);
+      } catch (e) {
+        debugPrint('codex ranking fetch failed: $e');
+      }
+    }
+
+    _mergeLocalRankingData();
+  }
+
+  void _mergeLocalRankingData() {
+    if (_equippedSword != null) {
+      final localCodexProfile = PlayerProfile(
+        userId: widget.userId,
+        nickname: widget.nickname,
+        swordId: _equippedSword!.data.id,
+        swordLevel: _equippedSword!.level,
+        swordBreakthroughLevel: _equippedSword!.breakthroughLevel,
+        titleId: _equippedTitle,
+        updatedAt: DateTime.now(),
+        totalBattle: _totalBattle,
+        totalBattleWin: _totalBattleWin,
+        codexCount: _codex.length,
+        platform: _isOnline ? 'google' : 'local',
+      );
+
+      final codexIndex = _codexRankings.indexWhere(
+        (p) => p.userId == widget.userId,
+      );
+      if (codexIndex >= 0) {
+        _codexRankings[codexIndex] = localCodexProfile;
+      } else {
+        _codexRankings.add(localCodexProfile);
+      }
+      _codexRankings.sort((a, b) {
+        final codexCmp = b.codexCount.compareTo(a.codexCount);
+        if (codexCmp != 0) return codexCmp;
+        return b.powerWithTitle.compareTo(a.powerWithTitle);
+      });
+    }
+
+    final bestFloor = _storage.infiniteTowerBestFloor;
+    if (bestFloor > 0 && _equippedSword != null) {
+      final localTower = {
+        'id': widget.userId,
+        'name': widget.nickname,
+        'floor': bestFloor,
+        'reachedAt': DateTime.now(),
+        'power': _totalPower,
+        'swordId': _equippedSword!.data.id,
+        'swordName': _equippedSword!.data.name,
+        'swordLevel': _equippedSword!.level,
+        'swordBreakthroughLevel': _equippedSword!.breakthroughLevel,
+        'platform': _isOnline ? 'google' : 'local',
+        'isOnline': _isOnline,
+      };
+
+      final towerIndex = _towerRankings.indexWhere(
+        (r) => r['id'] == widget.userId,
+      );
+      if (towerIndex >= 0) {
+        _towerRankings[towerIndex] = localTower;
+      } else {
+        _towerRankings.add(localTower);
+      }
+      _towerRankings.sort((a, b) {
+        final floorCmp = (b['floor'] as int).compareTo(a['floor'] as int);
+        if (floorCmp != 0) return floorCmp;
+        return (a['power'] as int).compareTo(b['power'] as int);
+      });
+    }
+  }
+
+  // ?꾪닾??怨꾩궛
   int get _totalPower {
     if (_equippedSword == null) return 0;
     final titleBonus = getTitleById(_equippedTitle).bonus;
     return _equippedSword!.totalPower + titleBonus;
   }
 
-  // ===== 데이터 로드/저장 =====
+  // ===== ?곗씠??濡쒕뱶/???=====
   Future<void> _loadGameData() async {
-    // 중복 호출 방지 (단, 타임아웃 이후에는 재시도 허용)
+    // 以묐났 ?몄텧 諛⑹? (?? ??꾩븘???댄썑?먮뒗 ?ъ떆???덉슜)
     if (_loadingInProgress && !_loadTimedOut) return;
 
     final int gen = ++_loadGeneration;
@@ -445,11 +547,11 @@ class _GameScreenState extends State<GameScreen>
       });
     }
 
-    // ✅ 10초 타임아웃: 로드가 오래 걸리면 재시도 버튼 노출
+    // ??10珥???꾩븘?? 濡쒕뱶媛 ?ㅻ옒 嫄몃━硫??ъ떆??踰꾪듉 ?몄텧
     _loadTimeoutTimer?.cancel();
     _loadTimeoutTimer = Timer(const Duration(seconds: 10), () {
       if (!mounted) return;
-      // 현재 로드 세대(gen)에서만 타임아웃 표시
+      // ?꾩옱 濡쒕뱶 ?몃?(gen)?먯꽌留???꾩븘???쒖떆
       if (gen == _loadGeneration && !_dataReady) {
         setState(() {
           _loadTimedOut = true;
@@ -461,14 +563,14 @@ class _GameScreenState extends State<GameScreen>
       try {
         await _storage.init();
 
-        // ✅ 유저별 광고 시청 횟수 로드
+        // ???좎?蹂?愿묎퀬 ?쒖껌 ?잛닔 濡쒕뱶
         await AdService().loadForCurrentUser();
 
-        // 친구 목록은 초기 화면 렌더 후 백그라운드 로드
+        // 移쒓뎄 紐⑸줉? 珥덇린 ?붾㈃ ?뚮뜑 ??諛깃렇?쇱슫??濡쒕뱶
         unawaited(_loadFriendIdsInBackground(gen));
       } catch (e) {
-        // StorageService init 자체가 실패해도 앱은 오프라인 모드로 진행 가능
-        debugPrint('❌ 게임 데이터 초기화 실패(오프라인 모드로 진행): $e');
+        // StorageService init ?먯껜媛 ?ㅽ뙣?대룄 ?깆? ?ㅽ봽?쇱씤 紐⑤뱶濡?吏꾪뻾 媛??
+        debugPrint('game data init failed, continuing offline: $e');
       }
 
       if (!mounted || gen != _loadGeneration) return;
@@ -488,22 +590,22 @@ class _GameScreenState extends State<GameScreen>
         _bossCooldowns = _storage.bossCooldowns;
         _codex = _storage.codex;
         _unlockedTitles = _storage.unlockedTitles;
-        _equippedTitle = _storage.equippedTitle ?? 't_01'; // ✅ 기본값 추가
+        _equippedTitle = _storage.equippedTitle ?? 't_01'; // ??湲곕낯媛?異붽?
         _unlockedAchievements = _storage.unlockedAchievements;
         _claimedAchievements = _storage.claimedAchievements;
         _attendanceStreak = _storage.attendanceStreak;
         _lastAttendance = _storage.lastAttendance;
         _seasonPassLevel = _storage.seasonPassLevel;
         _seasonPassExp = _storage.seasonPassExp;
-        _todaySeasonExp = _storage.todaySeasonExp; // ✅ 추가
+        _todaySeasonExp = _storage.todaySeasonExp; // ??異붽?
         _claimedSeasonRewards = _storage.claimedSeasonRewards;
-        _hasPremiumPass = _storage.hasPremiumPass; // ✅ 추가
-        _claimedPremiumRewards = _storage.claimedPremiumRewards; // ✅ 추가
-        _normalToRarePity = _storage.normalToRarePity; // ✅ 노말→레어 천장
+        _hasPremiumPass = _storage.hasPremiumPass; // ??異붽?
+        _claimedPremiumRewards = _storage.claimedPremiumRewards; // ??異붽?
+        _normalToRarePity = _storage.normalToRarePity; // ???몃쭚?믩젅??泥쒖옣
         _rareToUniquePity = _storage.rareToUniquePity;
         _uniqueToLegendPity = _storage.uniqueToLegendPity;
 
-        // 통계
+        // ?듦퀎
         _totalEnhanceAttempts = _storage.totalEnhanceAttempts;
         _totalEnhanceSuccess = _storage.totalEnhanceSuccess;
         _totalEnhanceFail = _storage.totalEnhanceFail;
@@ -519,12 +621,12 @@ class _GameScreenState extends State<GameScreen>
         _totalStoneUsed = _storage.totalStoneUsed;
         _totalQuestsCompleted = _storage.totalQuestsCompleted;
 
-        // ✅ 신규 유저면 시작 검 지급
+        // ???좉퇋 ?좎?硫??쒖옉 寃 吏湲?
         if (_inventory.isEmpty) {
           _giveStarterSword();
         }
 
-        // 장착 검 복원
+        // ?μ갑 寃 蹂듭썝
         final equippedUid = _storage.equippedSwordUid;
         if (equippedUid != null) {
           _equippedSword = _inventory
@@ -532,36 +634,36 @@ class _GameScreenState extends State<GameScreen>
               .firstOrNull;
         }
 
-        // 출석 체크 가능 여부
+        // 異쒖꽍 泥댄겕 媛???щ?
         _canCheckAttendance = !_storage.isToday(_lastAttendance);
 
-        // ✅ 일일 퀘스트 로드
+        // ???쇱씪 ?섏뒪??濡쒕뱶
         final savedQuests = _storage.dailyQuests;
         if (savedQuests.isNotEmpty) {
           _dailyQuests = savedQuests;
         }
 
-        // 일일 리셋 체크
+        // ?쇱씪 由ъ뀑 泥댄겕
         _checkDailyReset();
 
-        // ✅ 로드 완료: UI 조작 허용
+        // ??濡쒕뱶 ?꾨즺: UI 議곗옉 ?덉슜
         _dataReady = true;
         _loadTimedOut = false;
       });
 
-      // 로드 완료 후 초기화 로직
+      // 濡쒕뱶 ?꾨즺 ??珥덇린??濡쒖쭅
       _initDailyQuests();
       _updateRankings();
       _logLoginSnapshotOnce();
       _scheduleNoticeCheckAfterLoad();
 
-      // 로딩 중 발생한 저장 요청이 있으면, 로드 완료 후 1회만 저장
+      // 濡쒕뵫 以?諛쒖깮??????붿껌???덉쑝硫? 濡쒕뱶 ?꾨즺 ??1?뚮쭔 ???
       if (_deferredSaveAfterLoad) {
         _deferredSaveAfterLoad = false;
         _saveGameData();
       }
     } finally {
-      // 최신 로드 세대에서만 상태 정리
+      // 理쒖떊 濡쒕뱶 ?몃??먯꽌留??곹깭 ?뺣━
       if (gen == _loadGeneration) {
         _loadTimeoutTimer?.cancel();
         _loadingInProgress = false;
@@ -578,13 +680,13 @@ class _GameScreenState extends State<GameScreen>
         _friendIds = ids;
       });
     } catch (e) {
-      debugPrint('⚠️ 친구 목록 로드 실패: $e');
+      debugPrint('friend list load failed: $e');
     }
   }
 
-  // ✅ 시작 검 지급
+  // ???쒖옉 寃 吏湲?
   void _giveStarterSword() {
-    // 일반 등급 중 랜덤 검 지급
+    // ?쇰컲 ?깃툒 以??쒕뜡 寃 吏湲?
     final normalSwords = getSwordsByGrade(SwordGrade.normal);
     final starterSword = normalSwords[Random().nextInt(normalSwords.length)];
     final newSword = createNewSword(starterSword);
@@ -593,14 +695,14 @@ class _GameScreenState extends State<GameScreen>
     _equippedSword = newSword;
     _codex.add(starterSword.id);
 
-    // 저장
+    // ???
     _storage.inventory = _inventory;
     _storage.equippedSwordUid = newSword.uid;
     _storage.codex = _codex;
 
-    // 알림은 UI가 빌드된 후에
+    // ?뚮┝? UI媛 鍮뚮뱶???꾩뿉
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showNotification('🎁 시작 검 지급: ${starterSword.name}');
+      _showNotification('시작 검 지급: ${starterSword.name}');
     });
   }
 
@@ -637,14 +739,14 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void _saveGameData({bool cloudSave = true}) {
-    // ✅ 데이터 로딩 완료 전 저장은 서버 덮어쓰기 위험 → 로드 완료 후로 지연
+    // ???곗씠??濡쒕뵫 ?꾨즺 ????μ? ?쒕쾭 ??뼱?곌린 ?꾪뿕 ??濡쒕뱶 ?꾨즺 ?꾨줈 吏??
     if (!_dataReady) {
       _deferredSaveAfterLoad = true;
-      debugPrint('⏳ 데이터 로딩 중 저장 요청 - 로드 완료 후 저장 예정');
+      debugPrint('save requested while loading; deferred until load completes');
       return;
     }
 
-    _storage.nickname = widget.nickname; // 🔥 닉네임 저장 추가
+    _storage.nickname = widget.nickname; // ?뵦 ?됰꽕?????異붽?
     _storage.gold = _gold;
     _storage.diamond = _diamond;
     _storage.enhanceStone = _enhanceStone;
@@ -652,8 +754,8 @@ class _GameScreenState extends State<GameScreen>
     _storage.inventory = _inventory;
     _storage.maxInventory = _maxInventory;
     _storage.equippedSwordUid = _equippedSword?.uid;
-    _storage.equippedSwordId = _equippedSword?.data.id; // 친구/랭킹용
-    _storage.equippedSwordLevel = _equippedSword?.level ?? 1; // 친구/랭킹용
+    _storage.equippedSwordId = _equippedSword?.data.id; // 移쒓뎄/??궧??
+    _storage.equippedSwordLevel = _equippedSword?.level ?? 1; // 移쒓뎄/??궧??
     _storage.equippedSwordBreakthroughLevel =
         _equippedSword?.breakthroughLevel ?? 0;
     _storage.battleCount = _battleCount;
@@ -671,15 +773,15 @@ class _GameScreenState extends State<GameScreen>
     _storage.lastAttendance = _lastAttendance;
     _storage.seasonPassLevel = _seasonPassLevel;
     _storage.seasonPassExp = _seasonPassExp;
-    _storage.todaySeasonExp = _todaySeasonExp; // ✅ 추가
+    _storage.todaySeasonExp = _todaySeasonExp; // ??異붽?
     _storage.claimedSeasonRewards = _claimedSeasonRewards;
-    _storage.hasPremiumPass = _hasPremiumPass; // ✅ 추가
-    _storage.claimedPremiumRewards = _claimedPremiumRewards; // ✅ 추가
-    _storage.normalToRarePity = _normalToRarePity; // ✅ 노말→레어 천장
+    _storage.hasPremiumPass = _hasPremiumPass; // ??異붽?
+    _storage.claimedPremiumRewards = _claimedPremiumRewards; // ??異붽?
+    _storage.normalToRarePity = _normalToRarePity; // ???몃쭚?믩젅??泥쒖옣
     _storage.rareToUniquePity = _rareToUniquePity;
     _storage.uniqueToLegendPity = _uniqueToLegendPity;
 
-    // 통계
+    // ?듦퀎
     _storage.totalEnhanceAttempts = _totalEnhanceAttempts;
     _storage.totalEnhanceSuccess = _totalEnhanceSuccess;
     _storage.totalEnhanceFail = _totalEnhanceFail;
@@ -695,45 +797,45 @@ class _GameScreenState extends State<GameScreen>
     _storage.totalStoneUsed = _totalStoneUsed;
     _storage.totalQuestsCompleted = _totalQuestsCompleted;
 
-    // ✅ 일일 퀘스트 저장
+    // ???쇱씪 ?섏뒪?????
     _storage.dailyQuests = _dailyQuests;
 
-    // 🔥 Firestore에 저장 (비동기) - 로그아웃 시에는 스킵
+    // ?뵦 Firestore?????(鍮꾨룞湲? - 濡쒓렇?꾩썐 ?쒖뿉???ㅽ궢
     if (cloudSave) {
       _storage.saveToCloud();
     }
 
-    // 🔥 프로필 동기화는 장비/칭호 변경 시에만 호출 (Firebase 비용 절감)
-    // _syncMyProfile() 제거 - 대신 _equipSword(), _setTitle() 등에서 직접 호출
+    // ?뵦 ?꾨줈???숆린?붾뒗 ?λ퉬/移?샇 蹂寃??쒖뿉留??몄텧 (Firebase 鍮꾩슜 ?덇컧)
+    // _syncMyProfile() ?쒓굅 - ???_equipSword(), _setTitle() ?깆뿉??吏곸젒 ?몄텧
   }
 
-  // _checkDailyReset()에 추가
+  // _checkDailyReset()??異붽?
   void _checkDailyReset() {
     final lastReset = _storage.lastBattleReset;
     if (lastReset == null || !_storage.isToday(lastReset)) {
       setState(() {
         _battleCount = AppConstants.dailyBattleCount;
         _battleRefillCount = 0;
-        _todaySeasonExp = 0; // ✅ 추가: 시즌패스 일일 EXP 초기화
+        _todaySeasonExp = 0; // ??異붽?: ?쒖쫵?⑥뒪 ?쇱씪 EXP 珥덇린??
         _storage.battleCount = _battleCount;
         _storage.battleRefillCount = _battleRefillCount;
-        _storage.todaySeasonExp = 0; // ✅ 추가
-        _storage.lastBattleReset = _storage.serverNow; // ✅ 서버 시간
+        _storage.todaySeasonExp = 0; // ??異붽?
+        _storage.lastBattleReset = _storage.serverNow; // ???쒕쾭 ?쒓컙
 
-        // ✅ 퀘스트 리셋
+        // ???섏뒪??由ъ뀑
         final lastQuestReset = _storage.lastQuestReset;
         if (lastQuestReset == null || !_storage.isToday(lastQuestReset)) {
           _resetDailyQuests();
-          _storage.lastQuestReset = _storage.serverNow; // ✅ 서버 시간
+          _storage.lastQuestReset = _storage.serverNow; // ???쒕쾭 ?쒓컙
         }
       });
     }
   }
 
-  // ✅ 일일 퀘스트 초기화 (새 퀘스트 생성)
-  // _initDailyQuests 수정 - 저장된 데이터 로드
+  // ???쇱씪 ?섏뒪??珥덇린??(???섏뒪???앹꽦)
+  // _initDailyQuests ?섏젙 - ??λ맂 ?곗씠??濡쒕뱶
   void _initDailyQuests() {
-    // ✅ 저장된 퀘스트 로드 시도
+    // ????λ맂 ?섏뒪??濡쒕뱶 ?쒕룄
     final savedQuests = _storage.dailyQuests;
 
     if (savedQuests.isNotEmpty && _isQuestsFromToday()) {
@@ -741,12 +843,13 @@ class _GameScreenState extends State<GameScreen>
       return;
     }
 
-    // ✅ 새 퀘스트 생성
+    // ?????섏뒪???앹꽦
     _dailyQuests = [
       DailyQuest(
         id: 'dq_enhance',
-        name: '강화 5회',
-        description: '강화를 5회 시도하세요',
+        name: '\uAC15\uD654 5\uD68C',
+        description:
+            '\uAC15\uD654\uB97C 5\uD68C \uC2DC\uB3C4\uD558\uC138\uC694',
         type: QuestType.enhance,
         target: 5,
         rewardGold: 500,
@@ -754,8 +857,9 @@ class _GameScreenState extends State<GameScreen>
       ),
       DailyQuest(
         id: 'dq_battle',
-        name: '배틀 3회',
-        description: '배틀을 3회 진행하세요',
+        name: '\uBC30\uD2C0 3\uD68C',
+        description:
+            '\uBC30\uD2C0\uC744 3\uD68C \uC9C4\uD589\uD558\uC138\uC694',
         type: QuestType.battle,
         target: 3,
         rewardGold: 500,
@@ -763,8 +867,9 @@ class _GameScreenState extends State<GameScreen>
       ),
       DailyQuest(
         id: 'dq_boss',
-        name: '보스 처치 1회',
-        description: '보스를 1회 처치하세요',
+        name: '\uBCF4\uC2A4 \uCC98\uCE58 1\uD68C',
+        description:
+            '\uBCF4\uC2A4\uB97C 1\uD68C \uCC98\uCE58\uD558\uC138\uC694',
         type: QuestType.boss,
         target: 1,
         rewardGold: 300,
@@ -773,8 +878,8 @@ class _GameScreenState extends State<GameScreen>
       ),
       DailyQuest(
         id: 'dq_gacha',
-        name: '뽑기 3회',
-        description: '검을 3회 뽑으세요',
+        name: '\uBF51\uAE30 3\uD68C',
+        description: '\uAC80\uC744 3\uD68C \uBF51\uC73C\uC138\uC694',
         type: QuestType.gacha,
         target: 3,
         rewardGold: 500,
@@ -782,8 +887,8 @@ class _GameScreenState extends State<GameScreen>
       ),
       DailyQuest(
         id: 'dq_sell',
-        name: '판매 2회',
-        description: '검을 2개 판매하세요',
+        name: '\uD310\uB9E4 2\uD68C',
+        description: '\uAC80\uC744 2\uAC1C \uD310\uB9E4\uD558\uC138\uC694',
         type: QuestType.sell,
         target: 2,
         rewardGold: 300,
@@ -792,18 +897,18 @@ class _GameScreenState extends State<GameScreen>
       ),
       DailyQuest(
         id: 'dq_login',
-        name: '오늘의 접속',
-        description: '게임에 접속하세요',
+        name: '\uC624\uB298\uC758 \uC811\uC18D',
+        description: '\uAC8C\uC784\uC5D0 \uC811\uC18D\uD558\uC138\uC694',
         type: QuestType.login,
         target: 1,
         rewardGold: 500,
         rewardSeasonExp: 10,
-        progress: 1, // 접속 즉시 완료
+        progress: 1, // ?묒냽 利됱떆 ?꾨즺
       ),
     ];
 
     _storage.dailyQuests = _dailyQuests;
-    _storage.lastQuestReset = _storage.serverNow; // ✅ 서버 시간
+    _storage.lastQuestReset = _storage.serverNow; // ???쒕쾭 ?쒓컙
   }
 
   bool _isQuestsFromToday() {
@@ -811,53 +916,56 @@ class _GameScreenState extends State<GameScreen>
     return lastReset != null && _storage.isToday(lastReset);
   }
 
-  // ✅ 퀘스트 리셋 함수 (분리)
+  // ???섏뒪??由ъ뀑 ?⑥닔 (遺꾨━)
   void _resetDailyQuests() {
     _dailyQuests = [
       DailyQuest(
         id: 'dq_enhance',
-        name: '강화 5회',
-        description: '강화를 5회 시도하세요',
+        name: '\uAC15\uD654 5\uD68C',
+        description:
+            '\uAC15\uD654\uB97C 5\uD68C \uC2DC\uB3C4\uD558\uC138\uC694',
         type: QuestType.enhance,
         target: 5,
         rewardGold: 500,
       ),
       DailyQuest(
         id: 'dq_battle',
-        name: '배틀 3회',
-        description: '배틀을 3회 진행하세요',
+        name: '\uBC30\uD2C0 3\uD68C',
+        description:
+            '\uBC30\uD2C0\uC744 3\uD68C \uC9C4\uD589\uD558\uC138\uC694',
         type: QuestType.battle,
         target: 3,
         rewardGold: 500,
       ),
       DailyQuest(
         id: 'dq_boss',
-        name: '보스 처치 1회',
-        description: '보스를 1회 처치하세요',
+        name: '\uBCF4\uC2A4 \uCC98\uCE58 1\uD68C',
+        description:
+            '\uBCF4\uC2A4\uB97C 1\uD68C \uCC98\uCE58\uD558\uC138\uC694',
         type: QuestType.boss,
         target: 1,
         rewardGold: 500,
       ),
       DailyQuest(
         id: 'dq_gacha',
-        name: '뽑기 3회',
-        description: '검을 3회 뽑으세요',
+        name: '\uBF51\uAE30 3\uD68C',
+        description: '\uAC80\uC744 3\uD68C \uBF51\uC73C\uC138\uC694',
         type: QuestType.gacha,
         target: 3,
         rewardGold: 500,
       ),
       DailyQuest(
         id: 'dq_sell',
-        name: '판매 2회',
-        description: '검을 2개 판매하세요',
+        name: '\uD310\uB9E4 2\uD68C',
+        description: '\uAC80\uC744 2\uAC1C \uD310\uB9E4\uD558\uC138\uC694',
         type: QuestType.sell,
         target: 2,
         rewardGold: 500,
       ),
       DailyQuest(
         id: 'dq_login',
-        name: '접속',
-        description: '게임에 접속하세요',
+        name: '\uC811\uC18D',
+        description: '\uAC8C\uC784\uC5D0 \uC811\uC18D\uD558\uC138\uC694',
         type: QuestType.login,
         target: 1,
         rewardGold: 500,
@@ -870,9 +978,9 @@ class _GameScreenState extends State<GameScreen>
   void _updateRankings() {
     _rankings = [];
 
-    // ✅ 온라인 플레이어 추가 (있다면)
+    // ???⑤씪???뚮젅?댁뼱 異붽? (?덈떎硫?
     for (final player in _onlineRankings) {
-      // 이미 추가된 유저인지 체크 (중복 방지)
+      // ?대? 異붽????좎??몄? 泥댄겕 (以묐났 諛⑹?)
       final alreadyExists = _rankings.any((r) => r['id'] == player.userId);
       if (alreadyExists) continue;
 
@@ -885,7 +993,7 @@ class _GameScreenState extends State<GameScreen>
         'swordName': isSelf ? _equippedSword!.data.name : player.sword.name,
         'swordId': isSelf
             ? _equippedSword!.data.id
-            : player.swordId, // ✅ 검 ID 추가
+            : player.swordId, // ??寃 ID 異붽?
         'swordLevel': isSelf ? _equippedSword!.level : player.swordLevel,
         'swordBreakthroughLevel': isSelf
             ? _equippedSword!.breakthroughLevel
@@ -893,12 +1001,33 @@ class _GameScreenState extends State<GameScreen>
         'element': isSelf ? _equippedSword!.data.element : player.element,
         'totalBattle': isSelf ? _totalBattle : player.totalBattle,
         'totalBattleWin': isSelf ? _totalBattleWin : player.totalBattleWin,
+        'codexCount': isSelf ? _codex.length : player.codexCount,
         'isNpc': false,
         'isOnline': true,
       });
     }
 
-    // ✅ v10.4: 검레벨 > 검전투력 > 검등급 순 정렬
+    if (_equippedSword != null &&
+        !_rankings.any((r) => r['id'] == widget.userId)) {
+      _rankings.add({
+        'id': widget.userId,
+        'name': widget.nickname,
+        'power': _totalPower,
+        'swordGrade': _equippedSword!.data.grade,
+        'swordName': _equippedSword!.data.name,
+        'swordId': _equippedSword!.data.id,
+        'swordLevel': _equippedSword!.level,
+        'swordBreakthroughLevel': _equippedSword!.breakthroughLevel,
+        'element': _equippedSword!.data.element,
+        'totalBattle': _totalBattle,
+        'totalBattleWin': _totalBattleWin,
+        'codexCount': _codex.length,
+        'isNpc': false,
+        'isOnline': _isOnline,
+      });
+    }
+
+    // ??v10.4: 寃?덈꺼 > 寃?꾪닾??> 寃?깃툒 ???뺣젹
     _rankings.sort((a, b) {
       final levelCmp = (b['swordLevel'] as int).compareTo(
         a['swordLevel'] as int,
@@ -911,10 +1040,10 @@ class _GameScreenState extends State<GameScreen>
       );
     });
 
-    // 내 순위 찾기 (온라인 랭킹 기준)
+    // ???쒖쐞 李얘린 (?⑤씪????궧 湲곗?)
     _myRank = _rankings.indexWhere((r) => r['id'] == widget.userId) + 1;
 
-    // 전적 랭킹 (승수 > 승률 > 총 배틀 > 전투력)
+    // ?꾩쟻 ??궧 (?뱀닔 > ?밸쪧 > 珥?諛고? > ?꾪닾??
     _battleRankings = List<Map<String, dynamic>>.from(_rankings);
     _battleRankings.sort((a, b) {
       final aWin = a['totalBattleWin'] as int? ?? 0;
@@ -996,7 +1125,7 @@ class _GameScreenState extends State<GameScreen>
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF2a2a4a),
         title: Text(
-          '📢 $noticeTitle',
+          '공지 $noticeTitle',
           style: const TextStyle(color: Colors.white),
         ),
         content: Text(
@@ -1012,7 +1141,7 @@ class _GameScreenState extends State<GameScreen>
               _saveGameData();
               Navigator.pop(context);
             },
-            child: const Text('나중에'),
+            child: const Text('\uB098\uC911\uC5D0'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1037,7 +1166,7 @@ class _GameScreenState extends State<GameScreen>
   void _showAchievementNoticeDialog({required String kind}) {
     if (!mounted) return;
     final title = kind == 'achievement' ? '업적 달성' : '칭호 획득';
-    final message = kind == 'achievement' ? '업적란을 확인해주세요.' : '칭호란을 확인해주세요.';
+    final message = kind == 'achievement' ? '업적을 확인해주세요.' : '칭호를 확인해주세요.';
 
     showDialog(
       context: context,
@@ -1076,7 +1205,7 @@ class _GameScreenState extends State<GameScreen>
     });
   }
 
-  // ✅ 전설/불멸 획득 축하 다이얼로그
+  // ???꾩꽕/遺덈㈇ ?띾뱷 異뺥븯 ?ㅼ씠?쇰줈洹?
   void _showCongratulationDialog(OwnedSword sword) {
     final grade = sword.data.grade;
 
@@ -1106,9 +1235,9 @@ class _GameScreenState extends State<GameScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 축하 텍스트
+              // 異뺥븯 ?띿뒪??
               const Text(
-                '🎊 축하합니다! 🎊',
+                '?럧 異뺥븯?⑸땲?? ?럧',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -1117,7 +1246,7 @@ class _GameScreenState extends State<GameScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                '${grade.displayName} 등급 획득!',
+                '${grade.displayName} ?깃툒 ?띾뱷!',
                 style: TextStyle(
                   color: grade.color,
                   fontSize: 18,
@@ -1126,10 +1255,11 @@ class _GameScreenState extends State<GameScreen>
               ),
               const SizedBox(height: 24),
 
-              // 검 이미지 (SwordImageWidget)
+              // 寃 ?대?吏 (SwordImageWidget)
               SwordImageWidget(
                 grade: grade,
                 element: sword.data.element,
+                swordId: sword.data.id,
                 level: sword.level,
                 breakthroughLevel: sword.breakthroughLevel,
                 size: 120,
@@ -1137,7 +1267,7 @@ class _GameScreenState extends State<GameScreen>
               ),
               const SizedBox(height: 16),
 
-              // 검 이름
+              // 寃 ?대쫫
               Text(
                 sword.data.name,
                 style: const TextStyle(
@@ -1149,13 +1279,13 @@ class _GameScreenState extends State<GameScreen>
               ),
               const SizedBox(height: 8),
 
-              // 전투력
+              // ?꾪닾??
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.flash_on, color: Colors.amber, size: 20),
                   Text(
-                    ' 전투력: ${sword.totalPower}',
+                    ' ?꾪닾?? ${sword.totalPower}',
                     style: const TextStyle(
                       color: Colors.amber,
                       fontSize: 16,
@@ -1166,7 +1296,7 @@ class _GameScreenState extends State<GameScreen>
               ),
               const SizedBox(height: 24),
 
-              // 확인 버튼
+              // ?뺤씤 踰꾪듉
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -1179,7 +1309,7 @@ class _GameScreenState extends State<GameScreen>
                     ),
                   ),
                   child: const Text(
-                    '확인',
+                    '?뺤씤',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -1196,20 +1326,20 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void _addSeasonPassExp(int exp) {
-    // ✅ 하루 상한 체크
+    // ???섎（ ?곹븳 泥댄겕
     if (_todaySeasonExp >= _maxDailySeasonExp) {
-      // 이미 상한 도달 - 추가 EXP 없음
+      // ?대? ?곹븳 ?꾨떖 - 異붽? EXP ?놁쓬
       return;
     }
 
-    // ✅ 상한 초과 시 잘라내기
+    // ???곹븳 珥덇낵 ???섎씪?닿린
     final actualExp = (_todaySeasonExp + exp > _maxDailySeasonExp)
         ? _maxDailySeasonExp - _todaySeasonExp
         : exp;
 
     if (actualExp <= 0) return;
 
-    _todaySeasonExp += actualExp; // ✅ 오늘 획득량 기록
+    _todaySeasonExp += actualExp; // ???ㅻ뒛 ?띾뱷??湲곕줉
 
     final prevLevel = _seasonPassLevel;
     _seasonPassExp += actualExp;
@@ -1220,22 +1350,22 @@ class _GameScreenState extends State<GameScreen>
       _seasonPassLevel++;
     }
 
-    // ✅ 레벨업 시 알림
+    // ???덈꺼?????뚮┝
     if (_seasonPassLevel > prevLevel) {
       if (_seasonPassLevel >= AppConstants.maxSeasonPassLevel) {
-        _showNotification('🎉 시즌패스 최대 레벨 달성! Lv.$_seasonPassLevel');
+        _showNotification('시즌패스 최대 레벨 달성! Lv.$_seasonPassLevel');
       } else {
-        _showNotification('🎟️ 시즌패스 레벨 업! Lv.$_seasonPassLevel');
+        _showNotification('시즌패스 레벨 업! Lv.$_seasonPassLevel');
       }
     }
 
-    // ✅ 상한 도달 알림 (최초 1회)
+    // ???곹븳 ?꾨떖 ?뚮┝ (理쒖큹 1??
     if (_todaySeasonExp >= _maxDailySeasonExp &&
         _todaySeasonExp - actualExp < _maxDailySeasonExp) {
-      _showNotification('📌 오늘의 시즌패스 EXP 상한(${_maxDailySeasonExp}) 도달!');
+      _showNotification('오늘의 시즌패스 EXP 상한(${_maxDailySeasonExp}) 도달!');
     }
 
-    // 🔥 저장 제거 - 호출한 액션에서 이미 저장함 (Firebase 비용 절감)
+    // ?뵦 ????쒓굅 - ?몄텧???≪뀡?먯꽌 ?대? ??ν븿 (Firebase 鍮꾩슜 ?덇컧)
   }
 
   int _getSwordMaxEnhanceLevel(OwnedSword sword) {
@@ -1271,7 +1401,7 @@ class _GameScreenState extends State<GameScreen>
   void _showBreakthroughDialog() {
     final sword = _equippedSword;
     if (sword == null) {
-      _showNotification('장착된 검이 없습니다');
+      _showNotification('장착한 검이 없습니다');
       return;
     }
 
@@ -1282,7 +1412,7 @@ class _GameScreenState extends State<GameScreen>
 
     final requiredLevel = _getSwordMaxEnhanceLevel(sword);
     if (sword.level < requiredLevel) {
-      _showNotification('+${requiredLevel} 달성 후 돌파할 수 있습니다');
+      _showNotification('+$requiredLevel 달성 후 돌파할 수 있습니다');
       return;
     }
 
@@ -1301,7 +1431,7 @@ class _GameScreenState extends State<GameScreen>
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF2a2a4a),
-          title: const Text('🧿 돌파', style: TextStyle(color: Colors.white)),
+          title: const Text('돌파', style: TextStyle(color: Colors.white)),
           content: SizedBox(
             width: double.maxFinite,
             child: ConstrainedBox(
@@ -1322,23 +1452,23 @@ class _GameScreenState extends State<GameScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '돌파 ${sword.breakthroughLevel} → ${sword.breakthroughLevel + 1}',
+                      '?? ${sword.breakthroughLevel} -> ${sword.breakthroughLevel + 1}',
                       style: const TextStyle(color: Colors.white70),
                     ),
                     Text(
-                      '최대 강화: +$requiredLevel → +$nextMaxLevel',
+                      '?? ??: +$requiredLevel -> +$nextMaxLevel',
                       style: const TextStyle(color: Colors.amber),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      '필요 재료: 동일 등급 20강 이상 검 1개',
+                      '?? ??: ?? ?? 20? ?? ? 1?',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
                       ),
                     ),
                     Text(
-                      '필요 재화: ${formatNumber(goldCost)}G, 보스코어 $coreCost개',
+                      '?? ??: ${formatNumber(goldCost)}G, ???? $coreCost?',
                       style: const TextStyle(
                         color: Color(0xFF80DEEA),
                         fontSize: 12,
@@ -1359,7 +1489,7 @@ class _GameScreenState extends State<GameScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '보유 골드: ${formatNumber(_gold)}G',
+                            '?? ??: ${formatNumber(_gold)}G',
                             style: TextStyle(
                               color: hasEnoughGold
                                   ? Colors.amber
@@ -1370,7 +1500,7 @@ class _GameScreenState extends State<GameScreen>
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '보유 보스코어: $_bossCore',
+                            '?? ????: $_bossCore',
                             style: TextStyle(
                               color: hasEnoughCore
                                   ? const Color(0xFF80DEEA)
@@ -1383,7 +1513,7 @@ class _GameScreenState extends State<GameScreen>
                             const Padding(
                               padding: EdgeInsets.only(top: 6),
                               child: Text(
-                                '골드가 부족합니다.',
+                                '??? ?????.',
                                 style: TextStyle(
                                   color: Colors.redAccent,
                                   fontSize: 11,
@@ -1394,7 +1524,7 @@ class _GameScreenState extends State<GameScreen>
                             const Padding(
                               padding: EdgeInsets.only(top: 4),
                               child: Text(
-                                '보스코어가 부족합니다.',
+                                '????? ?????.',
                                 style: TextStyle(
                                   color: Colors.redAccent,
                                   fontSize: 11,
@@ -1407,7 +1537,7 @@ class _GameScreenState extends State<GameScreen>
                     const SizedBox(height: 12),
                     if (materials.isEmpty)
                       const Text(
-                        '사용 가능한 재료 검이 없습니다.',
+                        '?? ??? ?? ?? ????.',
                         style: TextStyle(color: Colors.redAccent),
                       )
                     else
@@ -1415,7 +1545,7 @@ class _GameScreenState extends State<GameScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            '재료 검 선택',
+                            '?? ? ??',
                             style: TextStyle(
                               color: Colors.white54,
                               fontSize: 12,
@@ -1459,6 +1589,7 @@ class _GameScreenState extends State<GameScreen>
                                         SwordImageWidget(
                                           grade: material.data.grade,
                                           element: material.data.element,
+                                          swordId: material.data.id,
                                           level: material.level,
                                           breakthroughLevel:
                                               material.breakthroughLevel,
@@ -1481,7 +1612,7 @@ class _GameScreenState extends State<GameScreen>
                                               ),
                                               const SizedBox(height: 2),
                                               Text(
-                                                '+${material.level}  ⚡ ${material.totalPower}',
+                                                '+${material.level}  ??${material.totalPower}',
                                                 style: const TextStyle(
                                                   color: Colors.white70,
                                                   fontSize: 12,
@@ -1517,8 +1648,8 @@ class _GameScreenState extends State<GameScreen>
                                 ),
                               ),
                               child: Text(
-                                '선택 재료: ${selectedMaterial!.data.name} +${selectedMaterial!.level}'
-                                ' / 전투력 ${selectedMaterial!.totalPower}',
+                                '?? ??: ${selectedMaterial!.data.name} +${selectedMaterial!.level}'
+                                ' / ??? ${selectedMaterial!.totalPower}',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
@@ -1535,7 +1666,7 @@ class _GameScreenState extends State<GameScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('취소'),
+              child: const Text('痍⑥냼'),
             ),
             ElevatedButton(
               onPressed:
@@ -1553,7 +1684,7 @@ class _GameScreenState extends State<GameScreen>
                         sword.breakthroughLevel++;
                         _saveGameData();
                         _showNotification(
-                          '🧿 돌파 성공! 최대 강화가 +${_getSwordMaxEnhanceLevel(sword)}로 증가했습니다',
+                          '?? ??! ?? ??? +${_getSwordMaxEnhanceLevel(sword)}? ??????',
                         );
                       });
                       Navigator.pop(dialogContext);
@@ -1566,7 +1697,7 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // _updateQuestProgress 수정
+  // _updateQuestProgress ?섏젙
   void _updateQuestProgress(QuestType type, [int amount = 1]) {
     bool updated = false;
 
@@ -1577,9 +1708,9 @@ class _GameScreenState extends State<GameScreen>
           quest.progress = newProgress;
           updated = true;
 
-          // ✅ 완료 시 알림
+          // ???꾨즺 ???뚮┝
           if (quest.isCompleted && quest.progress == quest.target) {
-            _showNotification('🎯 퀘스트 완료: ${quest.name}');
+            _showNotification('퀘스트 완료: ${quest.name}');
           }
         }
       }
@@ -1587,16 +1718,16 @@ class _GameScreenState extends State<GameScreen>
 
     if (updated) {
       setState(() {});
-      // 🔥 저장 제거 - 퀘스트를 트리거한 액션에서 이미 저장함 (Firebase 비용 절감)
+      // ?뵦 ????쒓굅 - ?섏뒪?몃? ?몃━嫄고븳 ?≪뀡?먯꽌 ?대? ??ν븿 (Firebase 鍮꾩슜 ?덇컧)
     }
   }
 
-  // 다음 파트에서 계속...
+  // ?ㅼ쓬 ?뚰듃?먯꽌 怨꾩냽...
 
-  // ===== 강화 =====
+  // ===== 媛뺥솕 =====
   void _enhance() {
     if (_equippedSword == null) {
-      _showNotification('장착된 검이 없습니다');
+      _showNotification('장착한 검이 없습니다');
       return;
     }
     if (_equippedSword!.level >= _getSwordMaxEnhanceLevel(_equippedSword!)) {
@@ -1612,13 +1743,13 @@ class _GameScreenState extends State<GameScreen>
       return;
     }
 
-    // 강화석 사용 체크
+    // 媛뺥솕???ъ슜 泥댄겕
     if (_useEnhanceStone && _enhanceStone <= 0) {
       _showNotification('강화석이 부족합니다');
       return;
     }
 
-    // 📊 Analytics용 - setState 전에 저장
+    // ?뱤 Analytics??- setState ?꾩뿉 ???
     final swordName = _equippedSword!.data.name;
     final swordGrade = _equippedSword!.data.grade.name;
     bool? enhanceSuccess;
@@ -1632,7 +1763,7 @@ class _GameScreenState extends State<GameScreen>
       double successRate = getEnhanceSuccessRate(currentLevel);
       double destroyRate = getEnhanceDestroyRate(currentLevel);
 
-      // 강화석 보너스 (레벨별 차등 적용)
+      // 媛뺥솕??蹂대꼫??(?덈꺼蹂?李⑤벑 ?곸슜)
       if (_useEnhanceStone) {
         _enhanceStone--;
         _totalStoneUsed++;
@@ -1648,7 +1779,7 @@ class _GameScreenState extends State<GameScreen>
       final roll = _random.nextDouble() * 100;
 
       if (roll < successRate) {
-        // 성공
+        // ?깃났
         enhanceSuccess = true;
         destroyed = false;
         _equippedSword!.level++;
@@ -1658,41 +1789,41 @@ class _GameScreenState extends State<GameScreen>
           _maxConsecutiveSuccess,
           _consecutiveSuccess,
         );
-        _showNotification('🎉 강화 성공! +${_equippedSword!.level}');
+        _showNotification('강화 성공! +${_equippedSword!.level}');
         _addSeasonPassExp(10);
         _checkAchievements();
 
-        // 🔊 강화 성공 사운드
+        // ?뵄 媛뺥솕 ?깃났 ?ъ슫??
         SoundService().playEnhanceSuccess();
 
-        // 🔥 강화 성공 애니메이션 트리거
+        // ?뵦 媛뺥솕 ?깃났 ?좊땲硫붿씠???몃━嫄?
         _showEnhanceEffect = true;
         Future.delayed(const Duration(milliseconds: 800), () {
           if (mounted) setState(() => _showEnhanceEffect = false);
         });
       } else if (roll < successRate + destroyRate) {
-        // 파괴
+        // ?뚭눼
         enhanceSuccess = false;
         destroyed = true;
         _totalDestroy++;
         _consecutiveSuccess = 0;
         final destroyedSword = _equippedSword!;
 
-        // 🔊 파괴 사운드
+        // ?뵄 ?뚭눼 ?ъ슫??
         SoundService().playDestroy();
 
-        // 파괴는 즉시 확정 저장하고, 광고 성공 시에만 복구한다.
+        // ?뚭눼??利됱떆 ?뺤젙 ??ν븯怨? 愿묎퀬 ?깃났 ?쒖뿉留?蹂듦뎄?쒕떎.
         _confirmDestroy(destroyedSword, showNotification: false);
         _showDestroyRecoveryDialog(destroyedSword);
       } else {
-        // 실패
+        // ?ㅽ뙣
         enhanceSuccess = false;
         destroyed = false;
         _totalEnhanceFail++;
         _consecutiveSuccess = 0;
-        _showNotification('❌ 강화 실패');
+        _showNotification('강화 실패');
 
-        // 🔊 강화 실패 사운드
+        // ?뵄 媛뺥솕 ?ㅽ뙣 ?ъ슫??
         SoundService().playEnhanceFail();
       }
 
@@ -1700,7 +1831,7 @@ class _GameScreenState extends State<GameScreen>
       _saveGameData();
     });
 
-    // 📊 Analytics (fire-and-forget)
+    // ?뱤 Analytics (fire-and-forget)
     AnalyticsService().logEnhance(
       swordName: swordName,
       grade: swordGrade,
@@ -1710,7 +1841,7 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // 🎬 파괴 복구 광고 다이얼로그
+  // ?렗 ?뚭눼 蹂듦뎄 愿묎퀬 ?ㅼ씠?쇰줈洹?
   void _showDestroyRecoveryDialog(OwnedSword destroyedSword) {
     final adService = AdService();
     final canWatch = adService.canWatchAd(AdRewardType.destroyRevive);
@@ -1723,11 +1854,11 @@ class _GameScreenState extends State<GameScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Text('💔', style: TextStyle(fontSize: 28)),
+            const Text('🎁', style: TextStyle(fontSize: 28)),
             const SizedBox(width: 8),
             const Expanded(
               child: Text(
-                '검이 파괴되었습니다!',
+                '?? ???????',
                 style: TextStyle(color: Colors.red, fontSize: 18),
               ),
             ),
@@ -1736,7 +1867,7 @@ class _GameScreenState extends State<GameScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 파괴된 검 정보
+            // ?뚭눼??寃 ?뺣낫
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -1749,6 +1880,7 @@ class _GameScreenState extends State<GameScreen>
                   SwordImageWidget(
                     grade: destroyedSword.data.grade,
                     element: destroyedSword.data.element,
+                    swordId: destroyedSword.data.id,
                     level: destroyedSword.level,
                     breakthroughLevel: destroyedSword.breakthroughLevel,
                     size: 80,
@@ -1763,7 +1895,7 @@ class _GameScreenState extends State<GameScreen>
                     ),
                   ),
                   Text(
-                    '⚡ ${formatNumber(destroyedSword.totalPower)}',
+                    '??? ${formatNumber(destroyedSword.totalPower)}',
                     style: const TextStyle(color: Colors.amber),
                   ),
                 ],
@@ -1771,7 +1903,7 @@ class _GameScreenState extends State<GameScreen>
             ),
             const SizedBox(height: 16),
 
-            // 광고 복구 안내
+            // 愿묎퀬 蹂듦뎄 ?덈궡
             if (canWatch)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -1782,19 +1914,19 @@ class _GameScreenState extends State<GameScreen>
                 ),
                 child: Row(
                   children: [
-                    const Text('🎬', style: TextStyle(fontSize: 20)),
+                    const Text('AD', style: TextStyle(fontSize: 14)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            '광고를 시청하면 검을 복구할 수 있습니다!',
+                            '??? ???? ?? ??? ? ????!',
                             style: TextStyle(color: Colors.green, fontSize: 13),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '오늘 남은 횟수: ${adService.getRemainingAdCount(AdRewardType.destroyRevive)}/3',
+                            '?? ?? ??: ${adService.getRemainingAdCount(AdRewardType.destroyRevive)}/3',
                             style: const TextStyle(
                               color: Colors.white54,
                               fontSize: 11,
@@ -1814,21 +1946,21 @@ class _GameScreenState extends State<GameScreen>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
-                  '오늘 광고 복구 횟수를 모두 사용했습니다.',
+                  '?? ?? ?? ??? ?? ??????.',
                   style: TextStyle(color: Colors.red, fontSize: 12),
                 ),
               ),
           ],
         ),
         actions: [
-          // 포기 버튼
+          // ?ш린 踰꾪듉
           TextButton(
             onPressed: () {
               Navigator.pop(context);
             },
             child: const Text('포기', style: TextStyle(color: Colors.red)),
           ),
-          // 광고 복구 버튼
+          // 愿묎퀬 蹂듦뎄 踰꾪듉
           if (canWatch)
             ElevatedButton.icon(
               onPressed: _isDestroyRecoveryInProgress
@@ -1845,9 +1977,9 @@ class _GameScreenState extends State<GameScreen>
                         }
                       }
                     },
-              icon: const Text('🎬'),
+              icon: const Text('AD'),
               label: Text(
-                '복구 (${adService.getRemainingAdCount(AdRewardType.destroyRevive)}/3)',
+                '?? (${adService.getRemainingAdCount(AdRewardType.destroyRevive)}/3)',
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
@@ -1859,7 +1991,7 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // 파괴 적용. 광고 성공 시 이 상태를 되돌린다.
+  // ?뚭눼 ?곸슜. 愿묎퀬 ?깃났 ?????곹깭瑜??섎룎由곕떎.
   void _confirmDestroy(
     OwnedSword destroyedSword, {
     bool showNotification = true,
@@ -1880,10 +2012,10 @@ class _GameScreenState extends State<GameScreen>
       if (showNotification) {
         if (_equippedSword != null) {
           _showNotification(
-            '💥 검이 파괴되었습니다... (${_equippedSword!.data.name} 자동 장착)',
+            '?뮙 寃???뚭눼?섏뿀?듬땲??.. (${_equippedSword!.data.name} ?먮룞 ?μ갑)',
           );
         } else {
-          _showNotification('💥 검이 파괴되었습니다...');
+          _showNotification('검이 파괴되었습니다...');
         }
       }
 
@@ -1893,13 +2025,13 @@ class _GameScreenState extends State<GameScreen>
     });
   }
 
-  // 광고 보고 검 복구
+  // 愿묎퀬 蹂닿퀬 寃 蹂듦뎄
   Future<void> _watchAdToRecoverSword(OwnedSword destroyedSword) async {
     final adService = AdService();
 
     if (!adService.isRewardedAdReady) {
       adService.loadRewardedAd();
-      _showNotification('광고를 불러오는 중입니다... 검은 아직 파괴되지 않았습니다.');
+      _showNotification('광고를 불러오는 중입니다... 검은 아직 파괴되지 않았습니다');
       if (mounted) {
         Future.delayed(const Duration(milliseconds: 400), () {
           if (mounted) _showDestroyRecoveryDialog(destroyedSword);
@@ -1914,12 +2046,12 @@ class _GameScreenState extends State<GameScreen>
       onRewarded: () {
         if (!mounted) return;
         setState(() {
-          // 이미 인벤토리에 남아있으므로 파괴만 취소 처리
+          // ?대? ?몃깽?좊━???⑥븘?덉쑝誘濡??뚭눼留?痍⑥냼 泥섎━
           if (!_inventory.any((s) => s.uid == destroyedSword.uid)) {
             _inventory.add(destroyedSword);
           }
           _equippedSword = destroyedSword;
-          _showNotification('✨ ${destroyedSword.data.name} 파괴가 취소되었습니다!');
+          _showNotification('${destroyedSword.data.name} 파괴가 취소되었습니다');
           _saveGameData();
         });
       },
@@ -1929,21 +2061,21 @@ class _GameScreenState extends State<GameScreen>
       },
     );
 
-    // 광고 시스템 오류 시에는 파괴 확정하지 않고 재시도 기회 제공
+    // 愿묎퀬 ?쒖뒪???ㅻ쪟 ?쒖뿉???뚭눼 ?뺤젙?섏? ?딄퀬 ?ъ떆??湲고쉶 ?쒓났
     if (!success && hadAdError) {
       if (mounted) _showDestroyRecoveryDialog(destroyedSword);
       return;
     }
 
-    // 광고를 끝까지 안 봤으면 이미 적용된 파괴 상태를 그대로 유지한다.
+    // 愿묎퀬瑜??앷퉴吏 ??遊ㅼ쑝硫??대? ?곸슜???뚭눼 ?곹깭瑜?洹몃?濡??좎??쒕떎.
     if (!success && !hadAdError) {
       _confirmDestroy(destroyedSword);
     }
   }
 
-  // ===== 뽑기 =====
+  // ===== 戮묎린 =====
 
-  // 🔥 빠른 가챠 (강화 화면용 - 팝업 없이 바로 뽑기)
+  // ?뵦 鍮좊Ⅸ 媛梨?(媛뺥솕 ?붾㈃??- ?앹뾽 ?놁씠 諛붾줈 戮묎린)
   void _quickGacha(int count) {
     final cost = count == 1
         ? AppConstants.singleGachaCostGold
@@ -1961,7 +2093,7 @@ class _GameScreenState extends State<GameScreen>
       return;
     }
 
-    // 📊 Analytics용
+    // ?뱤 Analytics??
     final List<OwnedSword> newSwords = [];
     OwnedSword? bestSword;
 
@@ -1987,21 +2119,21 @@ class _GameScreenState extends State<GameScreen>
         }
       }
 
-      // 첫 검 자동 장착
+      // 泥?寃 ?먮룞 ?μ갑
       if (_equippedSword == null && newSwords.isNotEmpty) {
         _equippedSword = newSwords.first;
       }
 
       _addSeasonPassExp(count * 5);
 
-      // 간단한 알림만 (팝업 없이)
+      // 媛꾨떒???뚮┝留?(?앹뾽 ?놁씠)
       if (count == 1) {
         _showNotification(
-          '🎰 ${newSwords.first.data.grade.emoji} ${newSwords.first.data.name} 획득!',
+          '?렟 ${newSwords.first.data.grade.emoji} ${newSwords.first.data.name} ?띾뱷!',
         );
       } else {
         final gradeEmojis = newSwords.map((s) => s.data.grade.emoji).join('');
-        _showNotification('🎰 ${count}개 획득! $gradeEmojis');
+        _showNotification('${count}개 획득! $gradeEmojis');
       }
 
       _updateRankings();
@@ -2009,7 +2141,7 @@ class _GameScreenState extends State<GameScreen>
       _saveGameData();
     });
 
-    // 📊 Analytics (fire-and-forget)
+    // ?뱤 Analytics (fire-and-forget)
     if (bestSword != null) {
       AnalyticsService().logGacha(
         type: 'normal',
@@ -2036,7 +2168,7 @@ class _GameScreenState extends State<GameScreen>
       return;
     }
 
-    // 📊 Analytics용 - setState 밖에서 선언
+    // ?뱤 Analytics??- setState 諛뽰뿉???좎뼵
     final List<OwnedSword> newSwords = [];
     OwnedSword? bestSword;
 
@@ -2048,7 +2180,7 @@ class _GameScreenState extends State<GameScreen>
       SwordGrade? highestGrade;
 
       for (int i = 0; i < count; i++) {
-        // ✅ 천장 적용된 뽑기
+        // ??泥쒖옣 ?곸슜??戮묎린
         final swordData = _rollGachaWithPity();
         final newSword = createNewSword(swordData);
 
@@ -2056,7 +2188,7 @@ class _GameScreenState extends State<GameScreen>
         newSwords.add(newSword);
         _codex.add(swordData.id);
 
-        // 최고 등급 추적
+        // 理쒓퀬 ?깃툒 異붿쟻
         if (highestGrade == null ||
             swordData.grade.index > highestGrade.index) {
           highestGrade = swordData.grade;
@@ -2064,14 +2196,14 @@ class _GameScreenState extends State<GameScreen>
         }
       }
 
-      // 첫 검 자동 장착
+      // 泥?寃 ?먮룞 ?μ갑
       if (_equippedSword == null && newSwords.isNotEmpty) {
         _equippedSword = newSwords.first;
       }
 
       _addSeasonPassExp(count * 5);
 
-      // 🔥 뽑기 결과 다이얼로그 표시 (새 검 이미지 적용)
+      // ?뵦 戮묎린 寃곌낵 ?ㅼ씠?쇰줈洹??쒖떆 (??寃 ?대?吏 ?곸슜)
       if (count == 1) {
         _showGachaResultDialog(newSwords.first, isPremium: false);
       } else {
@@ -2087,7 +2219,7 @@ class _GameScreenState extends State<GameScreen>
       _saveGameData();
     });
 
-    // 📊 Analytics (fire-and-forget) - 최고 등급 검만 로깅
+    // ?뱤 Analytics (fire-and-forget) - 理쒓퀬 ?깃툒 寃留?濡쒓퉭
     if (bestSword != null) {
       AnalyticsService().logGacha(
         type: 'normal',
@@ -2097,7 +2229,7 @@ class _GameScreenState extends State<GameScreen>
     }
   }
 
-  // ✅ 단순 확률 뽑기 (천장 없음 - 천장은 합성에만 적용)
+  // ???⑥닚 ?뺣쪧 戮묎린 (泥쒖옣 ?놁쓬 - 泥쒖옣? ?⑹꽦?먮쭔 ?곸슜)
   SwordData _rollGachaWithPity() {
     final roll = _random.nextDouble() * 100;
     double cumulative = 0;
@@ -2110,12 +2242,12 @@ class _GameScreenState extends State<GameScreen>
       }
     }
 
-    // 기본: 노말 등급
+    // 湲곕낯: ?몃쭚 ?깃툒
     final normalSwords = getSwordsByGrade(SwordGrade.normal);
     return normalSwords[_random.nextInt(normalSwords.length)];
   }
 
-  // ===== 합성 =====
+  // ===== ?⑹꽦 =====
   void _synthesize(List<OwnedSword> materials, {bool showResult = true}) {
     if (materials.length != AppConstants.synthesisRequiredCount) {
       _showNotification('검 3개를 선택하세요');
@@ -2124,13 +2256,13 @@ class _GameScreenState extends State<GameScreen>
 
     final grade = materials.first.data.grade;
 
-    // 불멸은 합성 불가(최상위)
+    // 遺덈㈇? ?⑹꽦 遺덇?(理쒖긽??
     if (!canSynthesize(grade)) {
       _showNotification('불멸 등급은 합성할 수 없습니다');
       return;
     }
 
-    // 같은 등급 체크
+    // 媛숈? ?깃툒 泥댄겕
     if (!materials.every((s) => s.data.grade == grade)) {
       _showNotification('같은 등급만 합성할 수 있습니다');
       return;
@@ -2142,20 +2274,20 @@ class _GameScreenState extends State<GameScreen>
       return;
     }
 
-    // ✅ 골드 비용 체크
+    // ??怨⑤뱶 鍮꾩슜 泥댄겕
     if (_gold < AppConstants.synthesisCostGold) {
       _showNotification('골드가 부족합니다 (${AppConstants.synthesisCostGold}G 필요)');
       return;
     }
 
     setState(() {
-      // ✅ 골드 차감
+      // ??怨⑤뱶 李④컧
       _gold -= AppConstants.synthesisCostGold;
 
-      // ✅ 장착 검이 재료로 사용되었는지 체크
+      // ???μ갑 寃???щ즺濡??ъ슜?섏뿀?붿? 泥댄겕
       bool equippedWasUsed = materials.any((s) => s.uid == _equippedSword?.uid);
 
-      // 재료 제거
+      // ?щ즺 ?쒓굅
       for (final sword in materials) {
         _inventory.remove(sword);
       }
@@ -2166,7 +2298,7 @@ class _GameScreenState extends State<GameScreen>
 
       _totalSynthesis++;
 
-      // 천장 로직: 노말(10) / 레어(50) / 유니크(100)
+      // 泥쒖옣 濡쒖쭅: ?몃쭚(10) / ?덉뼱(50) / ?좊땲??100)
       bool isCeiling = false;
       final ceiling = getSynthesisCeiling(grade);
 
@@ -2187,7 +2319,7 @@ class _GameScreenState extends State<GameScreen>
         }
       }
 
-      // 확률 체크
+      // ?뺣쪧 泥댄겕
       final probability = getSynthesisProbability(grade) ?? 0;
       final success = isCeiling || checkProbability(probability);
 
@@ -2199,17 +2331,17 @@ class _GameScreenState extends State<GameScreen>
         _inventory.add(newSword);
         _codex.add(resultData.id);
 
-        // ✅ 장착 검이 재료로 사용되었으면 새 검 자동 장착
+        // ???μ갑 寃???щ즺濡??ъ슜?섏뿀?쇰㈃ ??寃 ?먮룞 ?μ갑
         if (equippedWasUsed) {
           _equippedSword = newSword;
         }
 
-        // 성공 시 천장 카운트 리셋(해당 구간만)
+        // ?깃났 ??泥쒖옣 移댁슫??由ъ뀑(?대떦 援ш컙留?
         if (grade == SwordGrade.normal) _normalToRarePity = 0;
         if (grade == SwordGrade.rare) _rareToUniquePity = 0;
         if (grade == SwordGrade.unique) _uniqueToLegendPity = 0;
 
-        // ✅ 합성 성공 다이얼로그
+        // ???⑹꽦 ?깃났 ?ㅼ씠?쇰줈洹?
         if (showResult) {
           _showSynthesisResultDialog(
             isSuccess: true,
@@ -2220,7 +2352,7 @@ class _GameScreenState extends State<GameScreen>
           );
         }
       } else {
-        // 실패: 같은 등급 1개 반환
+        // ?ㅽ뙣: 媛숈? ?깃툒 1媛?諛섑솚
         final sameGradeSwords = getSwordsByGrade(grade);
         final resultData =
             sameGradeSwords[_random.nextInt(sameGradeSwords.length)];
@@ -2228,12 +2360,12 @@ class _GameScreenState extends State<GameScreen>
 
         _inventory.add(newSword);
 
-        // ✅ 장착 검이 재료로 사용되었으면 반환된 검 자동 장착
+        // ???μ갑 寃???щ즺濡??ъ슜?섏뿀?쇰㈃ 諛섑솚??寃 ?먮룞 ?μ갑
         if (equippedWasUsed) {
           _equippedSword = newSword;
         }
 
-        // ✅ 합성 실패 다이얼로그 (같은 등급 반환)
+        // ???⑹꽦 ?ㅽ뙣 ?ㅼ씠?쇰줈洹?(媛숈? ?깃툒 諛섑솚)
         if (showResult) {
           _showSynthesisResultDialog(
             isSuccess: false,
@@ -2245,7 +2377,7 @@ class _GameScreenState extends State<GameScreen>
         }
       }
 
-      // 천장 “발동”이면 카운터 리셋(여기서 확정 처리)
+      // 泥쒖옣 ?쒕컻?쇺앹씠硫?移댁슫??由ъ뀑(?ш린???뺤젙 泥섎━)
       if (isCeiling) {
         if (grade == SwordGrade.rare) _rareToUniquePity = 0;
         if (grade == SwordGrade.normal) _normalToRarePity = 0;
@@ -2259,7 +2391,7 @@ class _GameScreenState extends State<GameScreen>
     });
   }
 
-  // ✅ 합성 결과 다이얼로그
+  // ???⑹꽦 寃곌낵 ?ㅼ씠?쇰줈洹?
   void _showSynthesisResultDialog({
     required bool isSuccess,
     required bool isCeiling,
@@ -2305,7 +2437,7 @@ class _GameScreenState extends State<GameScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 결과 텍스트
+              // 寃곌낵 ?띿뒪??
               if (isCeiling)
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -2318,7 +2450,7 @@ class _GameScreenState extends State<GameScreen>
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
-                    '🎯 천장 달성!',
+                    '?렞 泥쒖옣 ?ъ꽦!',
                     style: TextStyle(
                       color: Colors.amber,
                       fontWeight: FontWeight.bold,
@@ -2327,7 +2459,7 @@ class _GameScreenState extends State<GameScreen>
                 ),
 
               Text(
-                isSuccess ? '✨ 합성 성공!' : '😅 등급 상승 실패',
+                isSuccess ? '???⑹꽦 ?깃났!' : '?쁾 ?깃툒 ?곸듅 ?ㅽ뙣',
                 style: TextStyle(
                   color: isSuccess ? Colors.white : Colors.white70,
                   fontSize: 22,
@@ -2336,13 +2468,13 @@ class _GameScreenState extends State<GameScreen>
               ),
               const SizedBox(height: 4),
 
-              // 등급 변화 표시
+              // ?깃툒 蹂???쒖떆
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(fromGrade.emoji, style: const TextStyle(fontSize: 24)),
                   Text(
-                    isSuccess ? ' → ' : ' → ',
+                    isSuccess ? ' ??' : ' ??',
                     style: TextStyle(
                       color: isSuccess ? Colors.green : Colors.grey,
                       fontSize: 20,
@@ -2356,10 +2488,11 @@ class _GameScreenState extends State<GameScreen>
               ),
               const SizedBox(height: 16),
 
-              // 결과 검 이미지 (SwordImageWidget)
+              // 寃곌낵 寃 ?대?吏 (SwordImageWidget)
               SwordImageWidget(
                 grade: grade,
                 element: resultSword.data.element,
+                swordId: resultSword.data.id,
                 level: resultSword.level,
                 breakthroughLevel: resultSword.breakthroughLevel,
                 size: 100,
@@ -2367,7 +2500,7 @@ class _GameScreenState extends State<GameScreen>
               ),
               const SizedBox(height: 8),
 
-              // 등급 배지
+              // ?깃툒 諛곗?
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -2387,7 +2520,7 @@ class _GameScreenState extends State<GameScreen>
               ),
               const SizedBox(height: 8),
 
-              // 검 이름
+              // 寃 ?대쫫
               Text(
                 resultSword.data.name,
                 style: const TextStyle(
@@ -2398,23 +2531,23 @@ class _GameScreenState extends State<GameScreen>
               ),
               const SizedBox(height: 4),
 
-              // 전투력
+              // ?꾪닾??
               Text(
-                '⚡ 전투력: ${resultSword.totalPower}',
+                '???꾪닾?? ${resultSword.totalPower}',
                 style: const TextStyle(color: Colors.amber),
               ),
 
               if (!isSuccess) ...[
                 const SizedBox(height: 12),
                 Text(
-                  '3개 → 1개로 합쳐졌습니다',
+                  '3媛???1媛쒕줈 ?⑹퀜議뚯뒿?덈떎',
                   style: TextStyle(color: Colors.grey[400], fontSize: 12),
                 ),
               ],
 
               const SizedBox(height: 20),
 
-              // 확인 버튼
+              // ?뺤씤 踰꾪듉
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -2427,7 +2560,7 @@ class _GameScreenState extends State<GameScreen>
                     ),
                   ),
                   child: const Text(
-                    '확인',
+                    '?뺤씤',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -2443,9 +2576,9 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // ===== 판매 =====
+  // ===== ?먮ℓ =====
 
-  // 🔥 현재 판매 이벤트 정보
+  // ?뵦 ?꾩옱 ?먮ℓ ?대깽???뺣낫
   Map<String, dynamic> get _currentSellEvent =>
       _sellEvents[_currentSellEventIndex];
   double get _sellEventRate => (_currentSellEvent['rate'] as num).toDouble();
@@ -2453,13 +2586,13 @@ class _GameScreenState extends State<GameScreen>
   String get _sellEventEmoji => _currentSellEvent['emoji'] as String;
   Color get _sellEventColor => Color(_currentSellEvent['color'] as int);
 
-  // 🔥 판매 시 매번 랜덤 이벤트 적용
+  // ?뵦 ?먮ℓ ??留ㅻ쾲 ?쒕뜡 ?대깽???곸슜
   void _randomizeSellEvent() {
     final random = Random();
 
-    // 가중치 기반 랜덤 (좋은 이벤트는 낮은 확률)
-    // [일반, 폭등, 대폭등, 버블, 황금시대, 폭락, 대폭락, 불경기, 호황]
-    final weights = [30, 18, 8, 4, 2, 18, 10, 5, 15]; // 총 110
+    // 媛以묒튂 湲곕컲 ?쒕뜡 (醫뗭? ?대깽?몃뒗 ??? ?뺣쪧)
+    // [?쇰컲, ??벑, ???벑, 踰꾨툝, ?⑷툑?쒕?, ??씫, ???씫, 遺덇꼍湲? ?명솴]
+    final weights = [30, 18, 8, 4, 2, 18, 10, 5, 15]; // 珥?110
     final totalWeight = weights.reduce((a, b) => a + b);
     int roll = random.nextInt(totalWeight);
 
@@ -2475,18 +2608,18 @@ class _GameScreenState extends State<GameScreen>
     _currentSellEventIndex = newIndex;
   }
 
-  // 🔥 홈 화면용 이벤트 변경 (미리보기)
+  // ?뵦 ???붾㈃???대깽??蹂寃?(誘몃━蹂닿린)
   void _changeSellEvent() {
     _randomizeSellEvent();
     setState(() {});
   }
 
   void _sellSword(OwnedSword sword) {
-    // 🎬 광고 2배 판매 옵션 다이얼로그
+    // ?렗 愿묎퀬 2諛??먮ℓ ?듭뀡 ?ㅼ씠?쇰줈洹?
     _showSellOptionsDialog(sword);
   }
 
-  // 🎬 판매 옵션 다이얼로그
+  // ?렗 ?먮ℓ ?듭뀡 ?ㅼ씠?쇰줈洹?
   void _showSellOptionsDialog(OwnedSword sword) {
     final adService = AdService();
     final canWatchAd = adService.canWatchAd(AdRewardType.sellBonus);
@@ -2510,7 +2643,7 @@ class _GameScreenState extends State<GameScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 검 정보
+            // 寃 ?뺣낫
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -2525,6 +2658,7 @@ class _GameScreenState extends State<GameScreen>
                   SwordImageWidget(
                     grade: sword.data.grade,
                     element: sword.data.element,
+                    swordId: sword.data.id,
                     level: sword.level,
                     breakthroughLevel: sword.breakthroughLevel,
                     size: 50,
@@ -2553,10 +2687,10 @@ class _GameScreenState extends State<GameScreen>
             ),
             const SizedBox(height: 16),
 
-            // 판매 옵션
+            // ?먮ℓ ?듭뀡
             Row(
               children: [
-                // 일반 판매
+                // ?쇰컲 ?먮ℓ
                 Expanded(
                   child: _buildSellOptionButton(
                     label: '일반 판매',
@@ -2569,10 +2703,10 @@ class _GameScreenState extends State<GameScreen>
                   ),
                 ),
                 const SizedBox(width: 12),
-                // 광고 2배 판매
+                // 愿묎퀬 2諛??먮ℓ
                 Expanded(
                   child: _buildSellOptionButton(
-                    label: '🎬 광고 2배',
+                    label: '광고 2배',
                     price: basePrice * 2,
                     color: Colors.green,
                     isAd: true,
@@ -2655,13 +2789,13 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // 🎬 광고 보고 2배 판매
+  // ?렗 愿묎퀬 蹂닿퀬 2諛??먮ℓ
   void _watchAdToSellDouble(OwnedSword sword) async {
     final adService = AdService();
 
     if (!adService.isRewardedAdReady) {
       _showNotification('광고를 불러오는 중...');
-      _executeSell(sword, bonusMultiplier: 1); // 일반 판매로 대체
+      _executeSell(sword, bonusMultiplier: 1); // ?쇰컲 ?먮ℓ濡??泥?
       return;
     }
 
@@ -2677,46 +2811,46 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // 🔥 실제 판매 실행
+  // ?뵦 ?ㅼ젣 ?먮ℓ ?ㅽ뻾
   void _executeSell(OwnedSword sword, {int bonusMultiplier = 1}) {
-    // 🔥 판매할 때마다 랜덤 이벤트 적용!
+    // ?뵦 ?먮ℓ???뚮쭏???쒕뜡 ?대깽???곸슜!
     _randomizeSellEvent();
 
-    // 🔥 이벤트 배율 + 광고 배율 적용한 판매가
+    // ?뵦 ?대깽??諛곗쑉 + 愿묎퀬 諛곗쑉 ?곸슜???먮ℓ媛
     final basePrice = sword.sellPrice;
     final eventPrice = (basePrice * _sellEventRate * bonusMultiplier).round();
 
-    // 📊 Analytics용 - setState 전에 저장
+    // ?뱤 Analytics??- setState ?꾩뿉 ???
     final swordGrade = sword.data.grade.name;
 
     setState(() {
       _inventory.remove(sword);
 
-      // 장착 중인 검을 판매한 경우 자동 장착
+      // ?μ갑 以묒씤 寃???먮ℓ??寃쎌슦 ?먮룞 ?μ갑
       if (_equippedSword?.uid == sword.uid) {
         if (_inventory.isNotEmpty) {
           _inventory.sort((a, b) => b.totalPower.compareTo(a.totalPower));
           _equippedSword = _inventory.first;
           _showNotification(
-            '${bonusMultiplier > 1 ? "🎬x2 " : ""}$_sellEventEmoji +${formatNumber(eventPrice)}G (${_equippedSword!.data.name} 자동 장착)',
+            '${bonusMultiplier > 1 ? "?렗x2 " : ""}$_sellEventEmoji +${formatNumber(eventPrice)}G (${_equippedSword!.data.name} ?먮룞 ?μ갑)',
           );
         } else {
           _equippedSword = null;
           _showNotification(
-            '${bonusMultiplier > 1 ? "🎬x2 " : ""}$_sellEventEmoji +${formatNumber(eventPrice)}G',
+            '${bonusMultiplier > 1 ? "?렗x2 " : ""}$_sellEventEmoji +${formatNumber(eventPrice)}G',
           );
         }
       } else {
         if (bonusMultiplier > 1) {
           _showNotification(
-            '🎬x2 $_sellEventEmoji +${formatNumber(eventPrice)}G!',
+            '?렗x2 $_sellEventEmoji +${formatNumber(eventPrice)}G!',
           );
         } else if (_sellEventRate != 1.0) {
           _showNotification(
-            '$_sellEventEmoji +${formatNumber(eventPrice)}G ($_sellEventName ${_sellEventRate}배!)',
+            '$_sellEventEmoji +${formatNumber(eventPrice)}G ($_sellEventName ${_sellEventRate}諛?)',
           );
         } else {
-          _showNotification('💰 +${formatNumber(eventPrice)}G');
+          _showNotification('+${formatNumber(eventPrice)}G');
         }
       }
 
@@ -2729,14 +2863,14 @@ class _GameScreenState extends State<GameScreen>
       _saveGameData();
     });
 
-    // 📊 Analytics (fire-and-forget)
+    // ?뱤 Analytics (fire-and-forget)
     AnalyticsService().logSellSword(grade: swordGrade, goldEarned: eventPrice);
   }
 
-  // ===== 인벤토리 확장 (인벤토리 탭에서) =====
+  // ===== ?몃깽?좊━ ?뺤옣 (?몃깽?좊━ ??뿉?? =====
   void _showExpandInventoryDialog() {
     if (_maxInventory >= AppConstants.maxInventoryLimit) {
-      _showNotification('최대 인벤토리입니다 (${AppConstants.maxInventoryLimit}칸)');
+      _showNotification('최대 인벤토리입니다 (${AppConstants.maxInventoryLimit}개)');
       return;
     }
     final nextSlot = _maxInventory + 1;
@@ -2745,14 +2879,14 @@ class _GameScreenState extends State<GameScreen>
       orElse: () => (0, 0, ''),
     );
     if (price.$1 == 0) {
-      _showNotification('더 이상 확장할 수 없습니다');
+      _showNotification('가격 정보를 찾을 수 없습니다');
       return;
     }
     final cost = price.$2;
     final type = price.$3;
     final isGold = type == 'gold';
     final currencyName = isGold ? '골드' : '다이아';
-    final currencyIcon = isGold ? '💰' : '💎';
+    final currencyIcon = isGold ? '?뮥' : '?뭿';
     final hasEnough = isGold ? _gold >= cost : _diamond >= cost;
 
     showDialog(
@@ -2761,14 +2895,14 @@ class _GameScreenState extends State<GameScreen>
         backgroundColor: const Color(0xFF2a2a4a),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          '📦 인벤토리 확장',
+          '인벤토리 확장',
           style: TextStyle(color: Colors.white, fontSize: 16),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '${_maxInventory}칸 → ${_maxInventory + 1}칸',
+              '${_maxInventory}? -> ${_maxInventory + 1}?',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -2815,7 +2949,7 @@ class _GameScreenState extends State<GameScreen>
                       _maxInventory += 1;
                       _saveGameData();
                     });
-                    _showNotification('📦 인벤토리 확장! (${_maxInventory}칸)');
+                    _showNotification('인벤토리 확장! (${_maxInventory}개)');
                   }
                 : null,
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
@@ -2826,7 +2960,7 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // ===== 일괄 판매 =====
+  // ===== ?쇨큵 ?먮ℓ =====
   void _bulkSellSwords(List<OwnedSword> swords) {
     if (swords.isEmpty) return;
 
@@ -2842,7 +2976,7 @@ class _GameScreenState extends State<GameScreen>
         _updateQuestProgress(QuestType.sell);
       }
 
-      // 장착 중인 검이 판매됐으면 자동 장착
+      // ?μ갑 以묒씤 寃???먮ℓ?먯쑝硫??먮룞 ?μ갑
       if (_equippedSword != null && !_inventory.contains(_equippedSword)) {
         if (_inventory.isNotEmpty) {
           _inventory.sort((a, b) => b.totalPower.compareTo(a.totalPower));
@@ -2858,11 +2992,11 @@ class _GameScreenState extends State<GameScreen>
     });
 
     _showNotification(
-      '💰 ${swords.length}개 판매! +${formatNumber(totalEarned)}G',
+      '?뮥 ${swords.length}媛??먮ℓ! +${formatNumber(totalEarned)}G',
     );
   }
 
-  // ===== 배틀 =====
+  // ===== 諛고? =====
   void _startBattle({
     NPCData? npc,
     Map<String, dynamic>? playerOpponent,
@@ -2873,11 +3007,11 @@ class _GameScreenState extends State<GameScreen>
       return;
     }
     if (_equippedSword == null) {
-      _showNotification('장착된 검이 없습니다');
+      _showNotification('장착한 검이 없습니다');
       return;
     }
 
-    // 상대 선택
+    // ?곷? ?좏깮
     Map<String, dynamic> opponent;
     if (npc != null) {
       opponent = {
@@ -2885,7 +3019,7 @@ class _GameScreenState extends State<GameScreen>
         'name': npc.name,
         'power': npc.power,
         'swordGrade': npc.sword.grade,
-        'swordId': npc.sword.id, // ✅ 검 ID 추가
+        'swordId': npc.sword.id, // ??寃 ID 異붽?
         'element': npc.sword.element,
         'swordLevel': npc.swordLevel,
         'isNpc': true,
@@ -2893,7 +3027,7 @@ class _GameScreenState extends State<GameScreen>
     } else if (playerOpponent != null) {
       opponent = playerOpponent;
     } else {
-      // ✅ 레벨 기반 랜덤 매칭
+      // ???덈꺼 湲곕컲 ?쒕뜡 留ㅼ묶
       final allCandidates = _rankings
           .where((r) => r['id'] != widget.userId)
           .toList();
@@ -2903,20 +3037,20 @@ class _GameScreenState extends State<GameScreen>
       }
 
       final myLevel = _equippedSword?.level ?? 1;
-      const int preferredRange = 3; // ±3 레벨 범위
+      const int preferredRange = 3; // 짹3 ?덈꺼 踰붿쐞
 
-      // 1차: 비슷한 레벨 유저 필터링
+      // 1李? 鍮꾩듂???덈꺼 ?좎? ?꾪꽣留?
       var candidates = allCandidates.where((r) {
         final oppLevel = (r['swordLevel'] as int?) ?? 1;
         return (oppLevel - myLevel).abs() <= preferredRange;
       }).toList();
 
-      // 2차: 비슷한 레벨이 없으면 전체에서 선택
+      // 2李? 鍮꾩듂???덈꺼???놁쑝硫??꾩껜?먯꽌 ?좏깮
       if (candidates.isEmpty) {
         candidates = allCandidates;
       }
 
-      // 3차: 레벨 차이가 적은 순으로 정렬 후 상위 50%에서 랜덤 선택 (더 공정한 매칭)
+      // 3李? ?덈꺼 李⑥씠媛 ?곸? ?쒖쑝濡??뺣젹 ???곸쐞 50%?먯꽌 ?쒕뜡 ?좏깮 (??怨듭젙??留ㅼ묶)
       candidates.sort((a, b) {
         final levelDiffA = ((a['swordLevel'] as int?) ?? 1 - myLevel).abs();
         final levelDiffB = ((b['swordLevel'] as int?) ?? 1 - myLevel).abs();
@@ -2934,7 +3068,7 @@ class _GameScreenState extends State<GameScreen>
       _totalBattle++;
       _updateQuestProgress(QuestType.battle);
 
-      // ✅ BattleEngine을 사용하여 실제 배틀 시뮬레이션
+      // ??BattleEngine???ъ슜?섏뿬 ?ㅼ젣 諛고? ?쒕??덉씠??
       final mySword = _equippedSword!;
       final oppGrade =
           (opponent['swordGrade'] as SwordGrade?) ?? SwordGrade.normal;
@@ -2942,20 +3076,20 @@ class _GameScreenState extends State<GameScreen>
       final oppElement =
           (opponent['element'] as GameElement?) ?? GameElement.fire;
       final oppId = (opponent['id'] as String?) ?? 'unknown';
-      final oppName = (opponent['name'] as String?) ?? '알 수 없음';
+      final oppName = (opponent['name'] as String?) ?? '?????놁쓬';
       final oppIsNpc = (opponent['isNpc'] as bool?) ?? true;
       final oppSwordId = opponent['swordId'] as String?;
 
-      // 상대 검 데이터 가져오기 (swordId가 있으면 실제 검, 없으면 등급에서 랜덤)
+      // ?곷? 寃 ?곗씠??媛?몄삤湲?(swordId媛 ?덉쑝硫??ㅼ젣 寃, ?놁쑝硫??깃툒?먯꽌 ?쒕뜡)
       SwordData oppSwordData;
       if (oppSwordId != null && oppSwordId.isNotEmpty) {
-        // ✅ 실제 검 ID로 검 데이터 가져오기
+        // ???ㅼ젣 寃 ID濡?寃 ?곗씠??媛?몄삤湲?
         oppSwordData = allSwords.firstWhere(
           (s) => s.id == oppSwordId,
           orElse: () => getSwordsByGrade(oppGrade).first,
         );
       } else {
-        // NPC나 검 ID가 없는 경우 등급에서 랜덤 선택
+        // NPC??寃 ID媛 ?녿뒗 寃쎌슦 ?깃툒?먯꽌 ?쒕뜡 ?좏깮
         final oppSwords = getSwordsByGrade(oppGrade);
         oppSwordData = oppSwords[_random.nextInt(oppSwords.length)];
       }
@@ -2967,10 +3101,11 @@ class _GameScreenState extends State<GameScreen>
         swordLevel: mySword.level,
         baseAtk: mySword.data.baseAtk,
         element: mySword.data.element,
-        primarySkillType: mySword.data.primarySkillType, // ✅ 안전한 getter 사용
+        primarySkillType: mySword.data.primarySkillType, // ???덉쟾??getter ?ъ슜
         skills: mySword.data.skills,
         swordName: mySword.data.name,
-        titleBonus: getTitleById(_equippedTitle).bonus, // ✅ 칭호 보너스 적용
+        swordId: mySword.data.id,
+        titleBonus: getTitleById(_equippedTitle).bonus, // ??移?샇 蹂대꼫???곸슜
       );
 
       final opp = BattleParticipant(
@@ -2980,17 +3115,18 @@ class _GameScreenState extends State<GameScreen>
         swordLevel: oppLevel,
         baseAtk: oppSwordData.baseAtk,
         element: oppElement,
-        primarySkillType: oppSwordData.primarySkillType, // ✅ 안전한 getter 사용
+        primarySkillType: oppSwordData.primarySkillType, // ???덉쟾??getter ?ъ슜
         skills: oppSwordData.skills,
         swordName: oppSwordData.name,
+        swordId: oppSwordData.id,
       );
 
-      // ✅ 배틀 엔진으로 시뮬레이션 실행
+      // ??諛고? ?붿쭊?쇰줈 ?쒕??덉씠???ㅽ뻾
       final result = BattleEngine.simulate(me: me, opponent: opp);
       final isWin = result.iWin;
 
       int goldReward = 0;
-      int stoneReward = 0; // 🔮 강화석 드롭
+      int stoneReward = 0; // ?뵰 媛뺥솕???쒕∼
       if (isWin) {
         _totalBattleWin++;
         _battleWinStreak++;
@@ -2998,7 +3134,7 @@ class _GameScreenState extends State<GameScreen>
         goldReward = result.rewardGold;
         _gold += goldReward;
 
-        // 🔮 강화석 30% 확률 드롭
+        // ?뵰 媛뺥솕??30% ?뺣쪧 ?쒕∼
         if (Random().nextInt(100) < 30) {
           stoneReward = 1;
           _enhanceStone += stoneReward;
@@ -3009,7 +3145,7 @@ class _GameScreenState extends State<GameScreen>
         _battleWinStreak = 0;
       }
 
-      // 🔥 새로운 배틀 아레나 화면으로 이동
+      // ?뵦 ?덈줈??諛고? ?꾨젅???붾㈃?쇰줈 ?대룞
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -3017,20 +3153,20 @@ class _GameScreenState extends State<GameScreen>
             me: me,
             opponent: opp,
             result: result,
-            stoneReward: stoneReward, // 🔮 강화석 드롭
+            stoneReward: stoneReward, // ?뵰 媛뺥솕???쒕∼
           ),
         ),
       ).then((_) {
-        // 🔮 배틀 종료 후 강화석 획득 알림
+        // ?뵰 諛고? 醫낅즺 ??媛뺥솕???띾뱷 ?뚮┝
         if (stoneReward > 0) {
           _showImageNotification(
-            '빛나는 강화석 $stoneReward개 획득!',
+            '鍮쏅굹??媛뺥솕??$stoneReward媛??띾뱷!',
             'assets/images/home/header/enhance_mythic.png',
           );
         }
       });
 
-      // ✅ 배틀 로그 포함하여 기록 저장
+      // ??諛고? 濡쒓렇 ?ы븿?섏뿬 湲곕줉 ???
       _battleRecords.insert(
         0,
         BattleRecord(
@@ -3052,7 +3188,7 @@ class _GameScreenState extends State<GameScreen>
         ),
       );
 
-      // ✅ 상대방에게 배틀 알림 전송 (NPC가 아닌 경우)
+      // ???곷?諛⑹뿉寃?諛고? ?뚮┝ ?꾩넚 (NPC媛 ?꾨땶 寃쎌슦)
       if (!oppIsNpc && _onlineService != null) {
         _onlineService!.sendBattleNotification(
           toUserId: oppId,
@@ -3071,7 +3207,7 @@ class _GameScreenState extends State<GameScreen>
       _checkAchievements();
       _saveGameData();
 
-      // 📊 Analytics (fire-and-forget)
+      // ?뱤 Analytics (fire-and-forget)
       AnalyticsService().logBattle(
         isWin: isWin,
         swordGrade: mySword.data.grade.name,
@@ -3081,17 +3217,17 @@ class _GameScreenState extends State<GameScreen>
     });
   }
 
-  // ===== 보스 레이드 =====
+  // ===== 蹂댁뒪 ?덉씠??=====
   void _startBossRaid(BossData boss) {
     if (_equippedSword == null) {
-      _showNotification('장착된 검이 없습니다');
+      _showNotification('장착한 검이 없습니다');
       return;
     }
 
-    // 쿨다운 체크
+    // 荑⑤떎??泥댄겕
     final cooldown = _bossCooldowns[boss.id];
     if (cooldown != null && cooldown.isAfter(_storage.serverNow)) {
-      // ✅ 서버 시간
+      // ???쒕쾭 ?쒓컙
       _showNotification('쿨다운 중입니다');
       return;
     }
@@ -3123,54 +3259,54 @@ class _GameScreenState extends State<GameScreen>
           _bossCore += coreReward;
         }
 
-        // ✅ 승리 시에만 쿨다운 설정
+        // ???밸━ ?쒖뿉留?荑⑤떎???ㅼ젙
         _bossCooldowns[boss.id] = _storage.serverNow.add(
           boss.cooldownDuration,
-        ); // ✅ 서버 시간
+        ); // ???쒕쾭 ?쒓컙
         _gold += boss.goldReward;
         _diamond += boss.diamondReward;
         _bossKills++;
-        _updateQuestProgress(QuestType.boss); // ✅ 승리 시에만 퀘스트 진행
+        _updateQuestProgress(QuestType.boss); // ???밸━ ?쒖뿉留??섏뒪??吏꾪뻾
         _showNotification(
-          '🎉 보스 처치! +${boss.goldReward}G +${boss.diamondReward}💎'
-          '${coreReward > 0 ? ' +$coreReward🧿' : ''}',
+          '?럦 蹂댁뒪 泥섏튂! +${boss.goldReward}G +${boss.diamondReward}?뭿'
+          '${coreReward > 0 ? ' +$coreReward?㎰' : ''}',
         );
         if (coreReward > 0) {
           _showImageNotification(
-            '보스코어 $coreReward개 획득!',
+            '蹂댁뒪肄붿뼱 $coreReward媛??띾뱷!',
             'assets/images/home/header/enhance_mythic.png',
           );
         } else {
-          _showNotification('🧿 이번에는 보스코어가 드랍되지 않았습니다.');
+          _showNotification('파괴된 보스코어가 아직 없습니다');
         }
         _addSeasonPassExp(50);
       } else {
-        // ✅ 패배 시 쿨다운 없음 (또는 짧은 쿨다운)
+        // ???⑤같 ??荑⑤떎???놁쓬 (?먮뒗 吏㏃? 荑⑤떎??
         _bossCooldowns[boss.id] = _storage.serverNow.add(
           const Duration(minutes: 5),
-        ); // ✅ 서버 시간
-        _showNotification('💀 패배... 5분 후 재도전 가능');
+        ); // ???쒕쾭 ?쒓컙
+        _showNotification('휴식 중... 5분 후 시도 가능');
       }
 
       _checkAchievements();
       _saveGameData();
     });
 
-    // 📊 Analytics (fire-and-forget)
+    // ?뱤 Analytics (fire-and-forget)
     AnalyticsService().logBossBattle(isWin: isWin, bossFloor: boss.minLevel);
   }
 
-  // ===== 출석 =====
+  // ===== 異쒖꽍 =====
   void _checkAttendance() {
     if (!_canCheckAttendance) return;
 
-    // 🎬 출석 보상 다이얼로그 표시
+    // ?렗 異쒖꽍 蹂댁긽 ?ㅼ씠?쇰줈洹??쒖떆
     _showAttendanceRewardDialog();
   }
 
-  // 🎬 출석 보상 다이얼로그
+  // ?렗 異쒖꽍 蹂댁긽 ?ㅼ씠?쇰줈洹?
   void _showAttendanceRewardDialog() {
-    // ✅ 연속 출석 끊김 체크
+    // ???곗냽 異쒖꽍 ?딄? 泥댄겕
     bool streakBroken = false;
     int newStreak = _attendanceStreak;
 
@@ -3185,7 +3321,7 @@ class _GameScreenState extends State<GameScreen>
       newStreak = 1;
     }
 
-    // 보상 계산
+    // 蹂댁긽 怨꾩궛
     final goldReward = AppConstants.getAttendanceGold(newStreak);
     final hasDiamondBonus = newStreak % 7 == 0;
     final adService = AdService();
@@ -3199,10 +3335,10 @@ class _GameScreenState extends State<GameScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Text('📅', style: TextStyle(fontSize: 28)),
+            const Text('★', style: TextStyle(fontSize: 28)),
             const SizedBox(width: 8),
             Text(
-              streakBroken ? '출석 체크' : '$newStreak일 연속 출석!',
+              streakBroken ? '연속 출석 초기화' : '$newStreak일 연속 출석!',
               style: const TextStyle(color: Colors.white, fontSize: 18),
             ),
           ],
@@ -3219,13 +3355,13 @@ class _GameScreenState extends State<GameScreen>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
-                  '😢 연속 출석이 끊겼습니다...\n다시 1일차부터 시작!',
+                  '연속 출석이 끊겼습니다.\\n다시 1일차부터 시작!',
                   style: TextStyle(color: Colors.red, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
               ),
 
-            // 보상 정보
+            // 蹂댁긽 ?뺣낫
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -3244,7 +3380,7 @@ class _GameScreenState extends State<GameScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        '💰 ${formatNumber(goldReward)}G',
+                        '${formatNumber(goldReward)}G',
                         style: const TextStyle(
                           color: Colors.amber,
                           fontSize: 20,
@@ -3254,7 +3390,7 @@ class _GameScreenState extends State<GameScreen>
                       if (hasDiamondBonus) ...[
                         const SizedBox(width: 12),
                         Text(
-                          '+${AppConstants.weeklyAttendanceDiamond}💎',
+                          '+${AppConstants.weeklyAttendanceDiamond} ???',
                           style: const TextStyle(
                             color: Colors.cyan,
                             fontSize: 16,
@@ -3268,10 +3404,10 @@ class _GameScreenState extends State<GameScreen>
             ),
             const SizedBox(height: 16),
 
-            // 버튼들
+            // 踰꾪듉??
             Row(
               children: [
-                // 일반 수령
+                // ?쇰컲 ?섎졊
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
@@ -3287,13 +3423,13 @@ class _GameScreenState extends State<GameScreen>
                       backgroundColor: Colors.blue,
                     ),
                     child: const Text(
-                      '수령',
+                      '받기',
                       style: TextStyle(color: Colors.white),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                // 광고 2배 수령
+                // 愿묎퀬 2諛??섎졊
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: canWatchAd
@@ -3320,7 +3456,7 @@ class _GameScreenState extends State<GameScreen>
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  '오늘 남은 횟수: ${adService.getRemainingAdCount(AdRewardType.attendanceBonus)}/1',
+                  '?? ?? ??: ${adService.getRemainingAdCount(AdRewardType.attendanceBonus)}/1',
                   style: const TextStyle(color: Colors.white54, fontSize: 10),
                 ),
               ),
@@ -3330,7 +3466,7 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // 출석 보상 지급
+  // 異쒖꽍 蹂댁긽 吏湲?
   void _executeAttendance(
     int newStreak,
     int goldReward,
@@ -3339,19 +3475,19 @@ class _GameScreenState extends State<GameScreen>
   ) {
     setState(() {
       _attendanceStreak = newStreak;
-      _lastAttendance = _storage.serverNow; // ✅ 서버 시간
+      _lastAttendance = _storage.serverNow; // ???쒕쾭 ?쒓컙
       _canCheckAttendance = false;
 
       final finalGold = goldReward * multiplier;
       _gold += finalGold;
 
       String message =
-          '${multiplier > 1 ? "🎬x2 " : ""}${_attendanceStreak}일 연속 출석! +${formatNumber(finalGold)}G';
+          '${multiplier > 1 ? "?렗x2 " : ""}${_attendanceStreak}???곗냽 異쒖꽍! +${formatNumber(finalGold)}G';
 
       if (hasDiamondBonus) {
         final finalDiamond = AppConstants.weeklyAttendanceDiamond * multiplier;
         _diamond += finalDiamond;
-        message += ' +$finalDiamond💎 (주간 보너스!)';
+        message += ' +$finalDiamond 다이아 (주간 보너스)';
       }
 
       _showNotification(message);
@@ -3359,11 +3495,11 @@ class _GameScreenState extends State<GameScreen>
       _saveGameData();
     });
 
-    // 📊 Analytics (fire-and-forget)
+    // ?뱤 Analytics (fire-and-forget)
     AnalyticsService().logAttendance(streak: newStreak, day: newStreak);
   }
 
-  // 광고로 출석 보상 2배
+  // 愿묎퀬濡?異쒖꽍 蹂댁긽 2諛?
   void _watchAdForDoubleAttendance(
     int newStreak,
     int goldReward,
@@ -3389,8 +3525,8 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // ===== 업적 체크 =====
-  // ===== 업적 체크(전체 데이터 기반) =====
+  // ===== ?낆쟻 泥댄겕 =====
+  // ===== ?낆쟻 泥댄겕(?꾩껜 ?곗씠??湲곕컲) =====
   void _checkAchievementsFull() {
     final prevAchievementCount = _unlockedAchievements.length;
     final prevTitleCount = _unlockedTitles.length;
@@ -3436,71 +3572,71 @@ class _GameScreenState extends State<GameScreen>
       }
     }
 
-    // ===== 칭호 체크 (30개 전체) =====
+    // ===== 移?샇 泥댄겕 (30媛??꾩껜) =====
 
-    // t_01: 초보 강화사 (게임 시작 - 자동 부여)
+    // t_01: 珥덈낫 媛뺥솕??(寃뚯엫 ?쒖옉 - ?먮룞 遺??
     _unlockedTitles.add('t_01');
 
-    // t_02: 강화 입문자 (첫 강화 성공)
+    // t_02: 媛뺥솕 ?낅Ц??(泥?媛뺥솕 ?깃났)
     if (_totalEnhanceSuccess >= 1) _unlockedTitles.add('t_02');
 
-    // 강화 단계 칭호
-    if (maxSwordLevel >= 5) _unlockedTitles.add('t_03'); // 5강 달성자
-    if (maxSwordLevel >= 10) _unlockedTitles.add('t_04'); // 10강 달성자
-    if (maxSwordLevel >= 15) _unlockedTitles.add('t_05'); // 15강 달성자
-    if (maxSwordLevel >= 20) _unlockedTitles.add('t_06'); // 20강 달성자
-    if (maxSwordLevel >= 25) _unlockedTitles.add('t_21'); // 🌟 숙련 강화사
-    if (maxSwordLevel >= 30) _unlockedTitles.add('t_26'); // 👑 전설의 강화사
-    if (maxSwordLevel >= 35) _unlockedTitles.add('t_32'); // 🌠 초월 강화사
-    if (maxSwordLevel >= 45) _unlockedTitles.add('t_33'); // 🌌 한계 초월
+    // 媛뺥솕 ?④퀎 移?샇
+    if (maxSwordLevel >= 5) _unlockedTitles.add('t_03'); // 5媛??ъ꽦??
+    if (maxSwordLevel >= 10) _unlockedTitles.add('t_04'); // 10媛??ъ꽦??
+    if (maxSwordLevel >= 15) _unlockedTitles.add('t_05'); // 15媛??ъ꽦??
+    if (maxSwordLevel >= 20) _unlockedTitles.add('t_06'); // 20媛??ъ꽦??
+    if (maxSwordLevel >= 25) _unlockedTitles.add('t_21'); // ?뙚 ?숇젴 媛뺥솕??
+    if (maxSwordLevel >= 30) _unlockedTitles.add('t_26'); // ?몣 ?꾩꽕??媛뺥솕??
+    if (maxSwordLevel >= 35) _unlockedTitles.add('t_32'); // ?뙛 珥덉썡 媛뺥솕??
+    if (maxSwordLevel >= 45) _unlockedTitles.add('t_33'); // ?뙆 ?쒓퀎 珥덉썡
 
-    // 돌파 칭호
-    if (breakthroughSwordCount >= 1) _unlockedTitles.add('t_31'); // 🧿 돌파자
+    // ?뚰뙆 移?샇
+    if (breakthroughSwordCount >= 1) _unlockedTitles.add('t_31'); // ?㎰ ?뚰뙆??
 
-    // 배틀 관련 칭호
-    if (_totalBattleWin >= 1) _unlockedTitles.add('t_07'); // 전투 초보
-    if (_battleWinStreak >= 10) _unlockedTitles.add('t_08'); // 10연승
-    if (_totalBattle >= 100) _unlockedTitles.add('t_09'); // 배틀 마니아
-    if (_totalBattle >= 500) _unlockedTitles.add('t_22'); // ⚔️ 백전노장
-    if (_totalRevengeWins >= 10) _unlockedTitles.add('t_20'); // 복수의 칼날
+    // 諛고? 愿??移?샇
+    if (_totalBattleWin >= 1) _unlockedTitles.add('t_07'); // ?꾪닾 珥덈낫
+    if (_battleWinStreak >= 10) _unlockedTitles.add('t_08'); // 10?곗듅
+    if (_totalBattle >= 100) _unlockedTitles.add('t_09'); // 諛고? 留덈땲??
+    if (_totalBattle >= 500) _unlockedTitles.add('t_22'); // ?뷂툘 諛깆쟾?몄옣
+    if (_totalRevengeWins >= 10) _unlockedTitles.add('t_20'); // 蹂듭닔??移쇰궇
 
-    // 보스 관련 칭호
-    if (_bossKills >= 10) _unlockedTitles.add('t_10'); // 보스 헌터
-    if (_bossKills >= 100) _unlockedTitles.add('t_23'); // 🐉 보스 슬레이어
+    // 蹂댁뒪 愿??移?샇
+    if (_bossKills >= 10) _unlockedTitles.add('t_10'); // 蹂댁뒪 ?뚰꽣
+    if (_bossKills >= 100) _unlockedTitles.add('t_23'); // ?릧 蹂댁뒪 ?щ젅?댁뼱
 
-    // 도감 관련 칭호
-    if (_codex.length >= 20) _unlockedTitles.add('t_11'); // 도감 수집가
-    if (_codex.length >= 50) _unlockedTitles.add('t_12'); // 도감 마니아
-    if (_codex.length >= 100) _unlockedTitles.add('t_25'); // 📚 도감 마스터
+    // ?꾧컧 愿??移?샇
+    if (_codex.length >= 20) _unlockedTitles.add('t_11'); // ?꾧컧 ?섏쭛媛
+    if (_codex.length >= 50) _unlockedTitles.add('t_12'); // ?꾧컧 留덈땲??
+    if (_codex.length >= 100) _unlockedTitles.add('t_25'); // ?뱴 ?꾧컧 留덉뒪??
 
-    // 재화 관련 칭호
-    if (_gold >= 100000) _unlockedTitles.add('t_13'); // 부자의 시작
-    if (_gold >= 1000000) _unlockedTitles.add('t_24'); // 💰 갑부
-    if (_diamond >= 10000) _unlockedTitles.add('t_28'); // 💎 다이아 수집가
+    // ?ы솕 愿??移?샇
+    if (_gold >= 100000) _unlockedTitles.add('t_13'); // 遺?먯쓽 ?쒖옉
+    if (_gold >= 1000000) _unlockedTitles.add('t_24'); // ?뮥 媛묐?
+    if (_diamond >= 10000) _unlockedTitles.add('t_28'); // ?뭿 ?ㅼ씠???섏쭛媛
 
-    // 출석 관련 칭호
-    if (_attendanceStreak >= 7) _unlockedTitles.add('t_14'); // 개근상
+    // 異쒖꽍 愿??移?샇
+    if (_attendanceStreak >= 7) _unlockedTitles.add('t_14'); // 媛쒓렐??
 
-    // 퀘스트 관련 칭호
-    if (_totalQuestsCompleted >= 100) _unlockedTitles.add('t_15'); // 퀘스트 마스터
+    // ?섏뒪??愿??移?샇
+    if (_totalQuestsCompleted >= 100) _unlockedTitles.add('t_15'); // ?섏뒪??留덉뒪??
 
-    // 합성/판매 관련 칭호
-    if (_totalSynthesis >= 50) _unlockedTitles.add('t_17'); // 합성 장인
-    if (_totalSell >= 100) _unlockedTitles.add('t_18'); // 판매왕
+    // ?⑹꽦/?먮ℓ 愿??移?샇
+    if (_totalSynthesis >= 50) _unlockedTitles.add('t_17'); // ?⑹꽦 ?μ씤
+    if (_totalSell >= 100) _unlockedTitles.add('t_18'); // ?먮ℓ??
 
-    // 시즌패스 관련 칭호
-    if (_seasonPassLevel >= 50) _unlockedTitles.add('t_19'); // 시즌패스 완료
+    // ?쒖쫵?⑥뒪 愿??移?샇
+    if (_seasonPassLevel >= 50) _unlockedTitles.add('t_19'); // ?쒖쫵?⑥뒪 ?꾨즺
 
-    // 레어 수집가 (레어 이상 검 10개 보유)
+    // ?덉뼱 ?섏쭛媛 (?덉뼱 ?댁긽 寃 10媛?蹂댁쑀)
     final rareOrHigherCount = _inventory
         .where((s) => s.data.grade.index >= SwordGrade.rare.index)
         .length;
-    if (rareOrHigherCount >= 10) _unlockedTitles.add('t_16'); // 레어 수집가
+    if (rareOrHigherCount >= 10) _unlockedTitles.add('t_16'); // ?덉뼱 ?섏쭛媛
 
-    // 랭킹 1위
-    if (_myRank == 1) _unlockedTitles.add('t_27'); // 🏆 그랜드 마스터
+    // ??궧 1??
+    if (_myRank == 1) _unlockedTitles.add('t_27'); // ?룇 洹몃옖??留덉뒪??
 
-    // 히든 칭호: 불멸의 검 획득
+    // ?덈뱺 移?샇: 遺덈㈇??寃 ?띾뱷
     final hasImmortal =
         _inventory.any((s) => s.data.grade == SwordGrade.immortal) ||
         _codex.any(
@@ -3508,10 +3644,10 @@ class _GameScreenState extends State<GameScreen>
             (s) => s.id == id && s.grade == SwordGrade.immortal,
           ),
         );
-    if (hasImmortal) _unlockedTitles.add('t_29'); // 🔮 히든 (불멸의 검)
+    if (hasImmortal) _unlockedTitles.add('t_29'); // ?뵰 ?덈뱺 (遺덈㈇??寃)
 
-    // 히든 칭호: 100연승
-    if (_maxWinStreak >= 100) _unlockedTitles.add('t_30'); // ⚡ 히든 (100연승)
+    // ?덈뱺 移?샇: 100?곗듅
+    if (_maxWinStreak >= 100) _unlockedTitles.add('t_30'); // ???덈뱺 (100?곗듅)
 
     final hasNewAchievements =
         _unlockedAchievements.length > prevAchievementCount;
@@ -3528,12 +3664,12 @@ class _GameScreenState extends State<GameScreen>
     }
   }
 
-  // 기존 코드에서 호출하던 _checkAchievements()는 아래처럼 연결(호환용)
+  // 湲곗〈 肄붾뱶?먯꽌 ?몄텧?섎뜕 _checkAchievements()???꾨옒泥섎읆 ?곌껐(?명솚??
   void _checkAchievements() {
     _checkAchievementsFull();
   }
 
-  // 다음 파트에서 계속...
+  // ?ㅼ쓬 ?뚰듃?먯꽌 怨꾩냽...
 
   // ===== UI BUILD =====
   @override
@@ -3550,15 +3686,24 @@ class _GameScreenState extends State<GameScreen>
         child: SafeArea(
           child: Stack(
             children: [
-              Column(
-                children: [
-                  _buildHeader(),
-                  Expanded(child: _buildCurrentPage()),
-                  _buildBottomNav(),
-                ],
+              Positioned.fill(
+                child: _GameImageShell(
+                  currentTab: _currentTab,
+                  body: _buildCurrentPage(),
+                  nickname: widget.nickname,
+                  totalPower: _totalPower,
+                  gold: _gold,
+                  diamond: _diamond,
+                  onHome: () => setState(() => _currentTab = 0),
+                  onInventory: () => setState(() => _currentTab = 1),
+                  onEnhance: () => setState(() => _currentTab = 2),
+                  onBattle: () => setState(() => _currentTab = 3),
+                  onShop: _openShopScreen,
+                  onMenu: _showSettingsDialog,
+                ),
               ),
 
-              // 알림
+              // ?뚮┝
               if (_notification != null)
                 Positioned(
                   top: 100,
@@ -3567,7 +3712,7 @@ class _GameScreenState extends State<GameScreen>
                   child: _buildNotification(),
                 ),
 
-              // ✅ 데이터 로딩 오버레이 (로딩 중 조작으로 서버 덮어쓰기 방지)
+              // ???곗씠??濡쒕뵫 ?ㅻ쾭?덉씠 (濡쒕뵫 以?議곗옉?쇰줈 ?쒕쾭 ??뼱?곌린 諛⑹?)
               if (!_dataReady)
                 Positioned.fill(
                   child: Stack(
@@ -3584,7 +3729,7 @@ class _GameScreenState extends State<GameScreen>
                               const CircularProgressIndicator(),
                               const SizedBox(height: 12),
                               const Text(
-                                '데이터 불러오는 중...',
+                                '데이터를 불러오는 중...',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
@@ -3592,7 +3737,7 @@ class _GameScreenState extends State<GameScreen>
                               ),
                             ] else ...[
                               const Text(
-                                '불러오는데 시간이 걸리고 있어요.',
+                                '불러오는 데 시간이 걸리고 있어요.',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
@@ -3601,7 +3746,7 @@ class _GameScreenState extends State<GameScreen>
                               const SizedBox(height: 12),
                               ElevatedButton(
                                 onPressed: () {
-                                  // 재시도 시 타임아웃 상태 해제 후 다시 로드
+                                  // 다시 시도할 수 있도록 대기 상태를 해제하고 재로딩한다.
                                   if (!mounted) return;
                                   setState(() {
                                     _loadTimedOut = false;
@@ -3624,257 +3769,31 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  Widget _buildHeader() {
-    final title = getTitleById(_equippedTitle);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 12,
-      ), // ✅ 16 → 12
-      child: Column(
-        children: [
-          // 닉네임 & 칭호
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.nickname,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ), // ✅ 18 → 16
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      title.name,
-                      style: TextStyle(
-                        color: title.grade.color,
-                        fontSize: 11,
-                      ), // ✅ 12 → 11
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              // 전투력
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ), // ✅ 12,6 → 10,4
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      'assets/images/home/fighting_power.png',
-                      width: 14,
-                      height: 14,
-                    ),
-                    const SizedBox(width: 2), // ✅ 4 → 2
-                    Text(
-                      formatNumber(_totalPower),
-                      style: const TextStyle(
-                        color: Colors.amber,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ), // ✅ 크기 지정
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-              // 🌐 공식 홈페이지 버튼
-              GestureDetector(
-                onTap: () => launchUrl(
-                  Uri.parse('https://www.opentheday.site/'),
-                  mode: LaunchMode.externalApplication,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.language,
-                    color: Colors.white70,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // ✅ 재화 바 - 완전히 새로 작성
-          Row(
-            children: [
-              // 골드, 다이아, 강화석을 Expanded로 균등 분배
-              Expanded(
-                flex: 3,
-                child: Row(
-                  children: [
-                    _currencyItemAsset(
-                      'assets/images/home/header/gold.png',
-                      _formatCompact(_gold),
-                      Colors.amber,
-                    ),
-                    const SizedBox(width: 4),
-                    _currencyItemAsset(
-                      'assets/images/home/header/diamond.png',
-                      _formatCompact(_diamond),
-                      Colors.blue,
-                    ),
-                    const SizedBox(width: 4),
-                    _currencyItemAsset(
-                      'assets/images/home/header/enhance_mythic.png',
-                      '$_enhanceStone',
-                      Colors.purple,
-                    ),
-                    const SizedBox(width: 4),
-                    _currencyItem('🧿', '$_bossCore', const Color(0xFF80DEEA)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // 배틀 카운트는 오른쪽 고정
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      'assets/images/home/header/battle_ticket.png',
-                      width: 14,
-                      height: 14,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      '$_battleCount',
-                      style: const TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ✅ 새로운 재화 아이템 위젯 (클래스 내부에 추가)
-  Widget _currencyItem(String icon, String value, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 10)),
-            const SizedBox(width: 2),
-            Flexible(
-              child: Text(
-                value,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ✅ 에셋 이미지 재화 아이템 위젯
-  Widget _currencyItemAsset(String assetPath, String value, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(assetPath, width: 14, height: 14),
-            const SizedBox(width: 2),
-            Flexible(
-              child: Text(
-                value,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ✅ 숫자 압축 포맷 (클래스 내부에 추가)
-  String _formatCompact(int value) {
-    if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
-    } else if (value >= 10000) {
-      return '${(value / 1000).toStringAsFixed(0)}K';
-    } else if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K';
-    }
-    return '$value';
-  }
-
   Widget _buildCurrentPage() {
     switch (_currentTab) {
       case 0:
         return HomeTab(
+          nickname: widget.nickname,
+          gold: _gold,
+          diamond: _diamond,
+          enhanceStone: _enhanceStone,
+          totalPower: _totalPower,
           equippedSword: _equippedSword,
-          attendanceStreak: _attendanceStreak,
-          canCheckAttendance: _canCheckAttendance,
           dailyQuests: _dailyQuests,
-          sellEventRate: _sellEventRate,
-          sellEventName: _sellEventName,
-          sellEventEmoji: _sellEventEmoji,
-          sellEventColor: _sellEventColor,
           titleBonus: getTitleById(_equippedTitle).bonus,
           titleName: getTitleById(_equippedTitle).name,
-          onCheckAttendance: _checkAttendance,
           onShowGachaDialog: _showGachaDialog,
           onShowSynthesisDialog: _showSynthesisDialog,
           onShowBossSelectDialog: _showBossSelectDialog,
           onShowRankingDialog: _showRankingDialog,
+          onOpenMinigame: _openMinigame,
+          onOpenInfiniteTower: _openInfiniteTower,
+          onOpenHome: () => setState(() => _currentTab = 0),
+          onOpenInventory: () => setState(() => _currentTab = 1),
+          onOpenEnhance: () => setState(() => _currentTab = 2),
+          onOpenBattle: () => setState(() => _currentTab = 3),
+          onOpenShop: _openShopScreen,
+          onShowSwordTestDialog: _showSwordImageTestDialog,
           onClaimQuestReward: _claimQuestReward,
         );
       case 1:
@@ -3890,8 +3809,11 @@ class _GameScreenState extends State<GameScreen>
         );
       case 2:
         return EnhanceTab(
+          nickname: widget.nickname,
           equippedSword: _equippedSword,
           gold: _gold,
+          diamond: _diamond,
+          totalPower: _totalPower,
           enhanceStone: _enhanceStone,
           bossCore: _bossCore,
           inventoryLength: _inventory.length,
@@ -3912,6 +3834,11 @@ class _GameScreenState extends State<GameScreen>
           onSellSword: _sellSword,
           onQuickGacha: () => _quickGacha(1),
           onToggleEnhanceStone: (v) => setState(() => _useEnhanceStone = v),
+          onOpenHome: () => setState(() => _currentTab = 0),
+          onOpenInventory: () => setState(() => _currentTab = 1),
+          onOpenEnhance: () => setState(() => _currentTab = 2),
+          onOpenBattle: () => setState(() => _currentTab = 3),
+          onOpenShop: _openShopScreen,
         );
       case 3:
         return BattleTab(
@@ -3947,73 +3874,40 @@ class _GameScreenState extends State<GameScreen>
           onShowDeleteAccountDialog: _showDeleteAccountDialog,
           onWatchAdForFreeGacha: _watchAdForFreeGacha,
           onWatchAdForStones: _watchAdForStones,
+          onOpenMinigame: _openMinigame,
         );
       default:
         return HomeTab(
+          nickname: widget.nickname,
+          gold: _gold,
+          diamond: _diamond,
+          enhanceStone: _enhanceStone,
+          totalPower: _totalPower,
           equippedSword: _equippedSword,
-          attendanceStreak: _attendanceStreak,
-          canCheckAttendance: _canCheckAttendance,
           dailyQuests: _dailyQuests,
-          sellEventRate: _sellEventRate,
-          sellEventName: _sellEventName,
-          sellEventEmoji: _sellEventEmoji,
-          sellEventColor: _sellEventColor,
           titleBonus: getTitleById(_equippedTitle).bonus,
           titleName: getTitleById(_equippedTitle).name,
-          onCheckAttendance: _checkAttendance,
           onShowGachaDialog: _showGachaDialog,
           onShowSynthesisDialog: _showSynthesisDialog,
           onShowBossSelectDialog: _showBossSelectDialog,
           onShowRankingDialog: _showRankingDialog,
+          onOpenMinigame: _openMinigame,
+          onOpenInfiniteTower: _openInfiniteTower,
+          onOpenHome: () => setState(() => _currentTab = 0),
+          onOpenInventory: () => setState(() => _currentTab = 1),
+          onOpenEnhance: () => setState(() => _currentTab = 2),
+          onOpenBattle: () => setState(() => _currentTab = 3),
+          onOpenShop: _openShopScreen,
+          onShowSwordTestDialog: _showSwordImageTestDialog,
           onClaimQuestReward: _claimQuestReward,
         );
     }
   }
 
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(0, Icons.home, '홈'),
-          _buildNavItem(1, Icons.inventory_2, '인벤토리'),
-          _buildNavItem(2, Icons.auto_awesome, '강화'),
-          _buildNavItem(3, Icons.sports_mma, '배틀'),
-          _buildNavItem(4, Icons.more_horiz, '더보기'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final isSelected = _currentTab == index;
-    return GestureDetector(
-      onTap: () => setState(() => _currentTab = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.amber : Colors.grey,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.amber : Colors.grey,
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ),
-      ),
+  void _showSwordImageTestDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (_) => const SwordImageTestDialog(),
     );
   }
 
@@ -4045,538 +3939,14 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // ===== 홈 페이지 =====
-  Widget _buildHomePage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 장착 검 카드
-          if (_equippedSword != null) _buildEquippedSwordCard(),
-
-          const SizedBox(height: 16),
-
-          // 🔥 판매 이벤트 배너
-          _buildSellEventBanner(),
-
-          const SizedBox(height: 16),
-
-          // 출석 체크
-          if (_canCheckAttendance) _buildAttendanceCard(),
-
-          const SizedBox(height: 16),
-
-          // 퀵 메뉴
-          _buildQuickMenu(),
-
-          const SizedBox(height: 16),
-
-          // 일일퀘스트 미리보기
-          _buildQuestPreview(),
-        ],
-      ),
-    );
-  }
-
-  // 🔥 판매 이벤트 배너 (마지막 판매 결과 표시)
-  Widget _buildSellEventBanner() {
-    final isGoodEvent = _sellEventRate >= 1.5;
-    final isBadEvent = _sellEventRate < 1.0;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isGoodEvent
-              ? [Colors.green.withOpacity(0.3), Colors.green.withOpacity(0.1)]
-              : isBadEvent
-              ? [Colors.red.withOpacity(0.3), Colors.red.withOpacity(0.1)]
-              : [Colors.grey.withOpacity(0.3), Colors.grey.withOpacity(0.1)],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _sellEventColor.withOpacity(0.5)),
-      ),
-      child: Row(
-        children: [
-          Text(_sellEventEmoji, style: const TextStyle(fontSize: 32)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      '마지막 판매: $_sellEventName',
-                      style: TextStyle(
-                        color: _sellEventColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _sellEventColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${_sellEventRate}배',
-                        style: TextStyle(
-                          color: _sellEventColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '💡 판매할 때마다 랜덤 이벤트 적용!',
-                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.casino, // 랜덤 아이콘
-            color: _sellEventColor,
-            size: 28,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEquippedSwordCard() {
-    final sword = _equippedSword!;
-    final grade = sword.data.grade;
-    final element = sword.data.element;
-    final skills = sword.data.skills;
-    final enhanceBonus = sword.level * sword.powerPerLevel;
-
-    return Container(
-      decoration: AppDecorations.glowCard(grade.color, blurRadius: 20),
-      child: Column(
-        children: [
-          // ✅ 상단: 검 기본 정보
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                // 검 이미지 (SwordImageWidget)
-                SwordImageWidget(
-                  grade: grade,
-                  element: element,
-                  level: sword.level,
-                  size: 80,
-                  showPulse: true,
-                ),
-                const SizedBox(width: 16),
-                // 검 정보
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 등급 배지
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: grade.color.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          grade.displayName,
-                          style: TextStyle(
-                            color: grade.color,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      // 검 이름
-                      Text(
-                        sword.data.name,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      // 강화 레벨
-                      Text(
-                        '+${sword.level}',
-                        style: const TextStyle(
-                          color: Colors.amber,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ✅ 중간: 스탯 정보
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(color: Colors.black.withOpacity(0.2)),
-            child: Row(
-              children: [
-                // 속성
-                Expanded(
-                  child: _buildStatItem(
-                    Text(element.emoji, style: const TextStyle(fontSize: 16)),
-                    '속성',
-                    element.nameKr,
-                    Colors.cyan,
-                  ),
-                ),
-                Container(width: 1, height: 40, color: Colors.white10),
-                // 전투력
-                Expanded(
-                  child: _buildStatItem(
-                    Image.asset('assets/images/home/fighting_power.png'),
-                    '전투력',
-                    '${sword.totalPower}',
-                    Colors.amber,
-                  ),
-                ),
-                Container(width: 1, height: 40, color: Colors.white10),
-                // 기본 공격력
-                Expanded(
-                  child: _buildStatItem(
-                    Image.asset('assets/images/home/fighting_basic.png'),
-                    '기본ATK',
-                    '${sword.data.baseAtk}',
-                    Colors.red,
-                  ),
-                ),
-                Container(width: 1, height: 40, color: Colors.white10),
-                // 강화 보너스
-                Expanded(
-                  child: _buildStatItem(
-                    Image.asset('assets/images/home/fighting_enhance.png'),
-                    '강화',
-                    '+$enhanceBonus',
-                    Colors.purple,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ✅ 하단: 스킬 정보
-          if (skills.isNotEmpty)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.auto_awesome,
-                        color: Colors.purple[300],
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '스킬 (${skills.length}개)',
-                        style: TextStyle(
-                          color: Colors.purple[300],
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ...skills.map((skill) => _buildSkillRow(skill)),
-                ],
-              ),
-            ),
-
-          // ✅ 판매가 표시
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(16),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '💰 판매가: ${formatNumber(sword.sellPrice)}G',
-                  style: const TextStyle(color: Colors.orange, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ✅ 스탯 아이템 위젯
-  Widget _buildStatItem(Widget icon, String label, String value, Color color) {
-    return Column(
-      children: [
-        SizedBox(width: 20, height: 20, child: icon),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ✅ 스킬 행 위젯
-  Widget _buildSkillRow(SkillData skill) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.purple.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.purple.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Text(skill.type.emoji, style: const TextStyle(fontSize: 18)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  skill.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-                Text(
-                  '${skill.type.nameKr} · ${skill.effect.nameKr}',
-                  style: TextStyle(color: Colors.purple[200], fontSize: 10),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '${skill.procRate}%',
-              style: const TextStyle(
-                color: Colors.amber,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAttendanceCard() {
-    // ✅ 예상 보상 계산
-    final expectedReward = AppConstants.getAttendanceGold(
-      _attendanceStreak + 1,
-    );
-    final isWeeklyBonus = (_attendanceStreak + 1) % 7 == 0;
-
-    return GestureDetector(
-      onTap: _checkAttendance,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: AppDecorations.gradientCard([
-          Colors.green.withOpacity(0.6),
-          Colors.green,
-        ]),
-        child: Row(
-          children: [
-            const Icon(Icons.calendar_today, color: Colors.white, size: 32),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '출석 체크',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  // ✅ 0일일 때 다른 메시지
-                  Text(
-                    _attendanceStreak > 0
-                        ? '$_attendanceStreak일 연속 출석 중!'
-                        : '첫 출석 보상을 받으세요!',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  // ✅ 예상 보상 표시
-                  Text(
-                    '보상: ${formatNumber(expectedReward)}G${isWeeklyBonus ? " + ${AppConstants.weeklyAttendanceDiamond}💎" : ""}',
-                    style: const TextStyle(color: Colors.amber, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                '받기',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickMenu() {
-    return Row(
-      children: [
-        _buildQuickMenuItem('🎰', '뽑기', () => _showGachaDialog()),
-        const SizedBox(width: 8),
-        _buildQuickMenuItem('🔄', '합성', () => _showSynthesisDialog()),
-        const SizedBox(width: 8),
-        _buildQuickMenuItem('🐉', '보스', () => _showBossSelectDialog()),
-        const SizedBox(width: 8),
-        _buildQuickMenuItem('🏆', '랭킹', () => _showRankingDialog()),
-      ],
-    );
-  }
-
-  Widget _buildQuickMenuItem(String icon, String label, VoidCallback onTap) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: AppDecorations.card(),
-          child: Column(
-            children: [
-              Text(icon, style: const TextStyle(fontSize: 28)),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuestPreview() {
-    final incomplete = _dailyQuests.where((q) => !q.claimed).take(3).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '일일 퀘스트',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ...incomplete.map(
-          (quest) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: AppDecorations.card(),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        quest.name,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      Text(
-                        quest.progressText,
-                        style: const TextStyle(
-                          color: Colors.amber,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (quest.isCompleted && !quest.claimed)
-                  ElevatedButton(
-                    onPressed: () => _claimQuestReward(quest),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                    ),
-                    child: const Text(
-                      '수령',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // _claimQuestReward 수정
+  // ===== ???섏씠吏 =====
   void _claimQuestReward(DailyQuest quest) {
     if (!quest.isCompleted || quest.claimed) return;
 
     setState(() {
       quest.claimed = true;
 
-      // ✅ 다양한 보상 지급
+      // ???ㅼ뼇??蹂댁긽 吏湲?
       if (quest.rewardGold > 0) {
         _gold += quest.rewardGold;
       }
@@ -4587,912 +3957,23 @@ class _GameScreenState extends State<GameScreen>
         _enhanceStone += quest.rewardStone;
       }
 
-      // ✅ 시즌패스 경험치
+      // ???쒖쫵?⑥뒪 寃쏀뿕移?
       if (quest.rewardSeasonExp > 0) {
         _addSeasonPassExp(quest.rewardSeasonExp);
       }
 
-      // ✅ 통계 업데이트
+      // ???듦퀎 ?낅뜲?댄듃
       _totalQuestsCompleted++;
 
-      _showNotification('🎁 보상 획득: ${quest.rewardText}');
+      _showNotification('보상 획득: ${quest.rewardText}');
       _checkAchievements();
       _saveGameData();
     });
   }
 
-  // ===== 인벤토리/강화/배틀/더보기 페이지 (간략화) =====
-  Widget _buildInventoryPage() {
-    final itemCount = _inventory.length;
-    final maxCount = _maxInventory;
-    final isFull = itemCount >= maxCount;
-
-    return Column(
-      children: [
-        // ✅ 상단: 인벤토리 용량 표시
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
-            border: Border(
-              bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.inventory_2,
-                color: isFull ? Colors.red : Colors.white70,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '인벤토리',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: isFull
-                      ? Colors.red.withOpacity(0.2)
-                      : Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isFull ? Colors.red : Colors.white.withOpacity(0.2),
-                  ),
-                ),
-                child: Text(
-                  '$itemCount / $maxCount',
-                  style: TextStyle(
-                    color: isFull ? Colors.red : Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              if (isFull) ...[
-                const SizedBox(width: 8),
-                Text(
-                  '가득 참!',
-                  style: TextStyle(
-                    color: Colors.red[300],
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-
-        // ✅ 그리드 목록
-        Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 0.85,
-            ),
-            itemCount: _inventory.length,
-            itemBuilder: (_, i) {
-              final sword = _inventory[i];
-              final isEquipped = _equippedSword?.uid == sword.uid;
-              return GestureDetector(
-                onTap: () => _showSwordDetailDialog(sword),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: sword.data.grade.color.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isEquipped
-                          ? Colors.amber
-                          : sword.data.grade.color.withOpacity(0.5),
-                      width: isEquipped ? 2 : 1,
-                    ),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // 검 이미지
-                      SwordImageWidget(
-                        grade: sword.data.grade,
-                        element: sword.data.element,
-                        level: sword.level,
-                        breakthroughLevel: sword.breakthroughLevel,
-                        size: 60,
-                        showPulse: false,
-                      ),
-                      // 장착 표시
-                      if (isEquipped)
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Colors.amber,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              size: 10,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      // 검 이름
-                      Positioned(
-                        bottom: 4,
-                        child: Text(
-                          sword.data.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEnhancePage() {
-    if (_equippedSword == null) {
-      return const Center(
-        child: Text('장착된 검이 없습니다', style: TextStyle(color: Colors.white54)),
-      );
-    }
-
-    final sword = _equippedSword!;
-    final cost = getEnhanceCost(sword.level);
-    final successRate = getEnhanceSuccessRate(sword.level);
-    final destroyRate = getEnhanceDestroyRate(sword.level);
-    final canSell = true; // 🔥 검 1개여도 판매 가능
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        children: [
-          // 검 정보 카드 (콤팩트)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: AppDecorations.glowCard(
-              sword.data.grade.color,
-              blurRadius: 20,
-            ),
-            child: Row(
-              children: [
-                // 🔥 SwordImageWidget (작게)
-                SwordImageWidget(
-                  grade: sword.data.grade,
-                  element: sword.data.element,
-                  level: sword.level,
-                  breakthroughLevel: sword.breakthroughLevel,
-                  size: 100,
-                  showPulse: true,
-                  showEnhanceEffect: _showEnhanceEffect,
-                ),
-                const SizedBox(width: 12),
-                // 검 정보
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        sword.data.name,
-                        style: TextStyle(
-                          color: sword.data.grade.color,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            '⚡ ${sword.totalPower}',
-                            style: const TextStyle(
-                              color: Colors.amber,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            '💰 ${formatNumber(sword.sellPrice)}G',
-                            style: const TextStyle(
-                              color: Colors.orange,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // 비용
-                      Row(
-                        children: [
-                          const Text(
-                            '강화 비용: ',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            '$cost G',
-                            style: const TextStyle(
-                              color: Colors.amber,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // 확률 표시 (성공 / 유지 / 파괴)
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildProbBox(
-                    '✅ 성공',
-                    formatPercent(successRate),
-                    Colors.green,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _buildProbBox(
-                    '➖ 유지',
-                    formatPercent(100 - successRate - destroyRate),
-                    Colors.grey,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _buildProbBox(
-                    '💥 파괴',
-                    formatPercent(destroyRate),
-                    destroyRate > 0 ? Colors.red : Colors.grey[700]!,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // 강화석 (콤팩트)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Checkbox(
-                  value: _useEnhanceStone,
-                  onChanged: (v) =>
-                      setState(() => _useEnhanceStone = v ?? false),
-                  activeColor: Colors.purple,
-                  visualDensity: VisualDensity.compact,
-                ),
-                Expanded(
-                  child: Text(
-                    '강화석 사용 (성공+10%, 파괴-5%) 보유: $_enhanceStone개',
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ✅ 판매 + 구매 + 강화 버튼
-          Row(
-            children: [
-              // 판매 버튼
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: canSell ? () => _sellSword(sword) : null,
-                  icon: const Icon(Icons.sell, size: 16),
-                  label: const Text('판매'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.orange,
-                    side: const BorderSide(color: Colors.orange),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // 🔥 구매 버튼 (1회)
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _gold >= 500 && _inventory.length < _maxInventory
-                      ? () => _quickGacha(1)
-                      : null,
-                  icon: const Icon(Icons.add_box, size: 16),
-                  label: const Text('구매'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.blue,
-                    side: const BorderSide(color: Colors.blue),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // 강화 버튼
-              Expanded(
-                flex: 2,
-                child: ElevatedButton(
-                  onPressed: _gold >= cost && sword.level < 30
-                      ? _enhance
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text(
-                    '강화하기',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEnhanceInfo(String label, String value, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.white70)),
-          Text(
-            value,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProbBox(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Text(label, style: TextStyle(color: color, fontSize: 11)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBattlePage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // 남은 배틀 횟수
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: AppDecorations.card(
-              borderColor: Colors.red.withOpacity(0.5),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.sports_mma, color: Colors.red),
-                const SizedBox(width: 8),
-                Text(
-                  '남은 배틀: $_battleCount/${AppConstants.dailyBattleCount}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          if (_battleWinStreak > 0) ...[
-            const SizedBox(height: 12),
-            Text(
-              '🔥 $_battleWinStreak연승 중!',
-              style: const TextStyle(
-                color: Colors.amber,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 24),
-
-          // ✅ 배틀 버튼들 (가로 배치)
-          Row(
-            children: [
-              // 랜덤 배틀
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _battleCount > 0 && _equippedSword != null
-                      ? () => _startBattle()
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                  ),
-                  child: const Column(
-                    children: [
-                      Icon(Icons.casino, size: 28, color: Colors.white),
-                      SizedBox(height: 4),
-                      Text(
-                        '랜덤 배틀',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // ✅ 지정 배틀 버튼 추가
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _battleCount > 0 && _equippedSword != null
-                      ? _showBattleSelectScreen
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                  ),
-                  child: const Column(
-                    children: [
-                      Icon(Icons.person_search, size: 28, color: Colors.white),
-                      SizedBox(height: 4),
-                      Text(
-                        '지정 배틀',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // ✅ 배틀 기록 섹션
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '최근 배틀 기록',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    '${_battleRecords.length}건',
-                    style: const TextStyle(color: Colors.white54),
-                  ),
-                  const SizedBox(width: 8),
-                  // 🔄 새로고침 버튼
-                  GestureDetector(
-                    onTap: () async {
-                      _showNotification('배틀 기록을 새로고침 중...');
-                      await _fetchBattleNotifications();
-                      if (mounted) setState(() {});
-                    },
-                    child: const Icon(
-                      Icons.refresh,
-                      color: Colors.white54,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // ✅ 배틀 기록 목록
-          if (_battleRecords.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: Text(
-                '배틀 기록이 없습니다',
-                style: TextStyle(color: Colors.white54),
-              ),
-            )
-          else
-            ..._battleRecords
-                .take(10)
-                .map((record) => _buildBattleRecordItem(record)),
-        ],
-      ),
-    );
-  }
-
-  // ✅ 배틀 기록 아이템 위젯
-  Widget _buildBattleRecordItem(BattleRecord record) {
-    // 공격/방어에 따른 결과 텍스트
-    String resultText;
-    if (record.isAttacker) {
-      resultText = record.isWin ? '승리' : '패배';
-    } else {
-      resultText = record.isWin ? '방어 성공' : '방어 실패';
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: AppDecorations.card(
-        borderColor: record.isWin
-            ? Colors.green.withOpacity(0.3)
-            : Colors.red.withOpacity(0.3),
-      ),
-      child: Row(
-        children: [
-          // 승패 아이콘
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: record.isWin
-                  ? Colors.green.withOpacity(0.2)
-                  : Colors.red.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    record.isWin ? '승' : '패',
-                    style: TextStyle(
-                      color: record.isWin ? Colors.green : Colors.red,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    record.isAttacker ? '공격' : '방어',
-                    style: TextStyle(
-                      color: record.isAttacker ? Colors.orange : Colors.blue,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // 상대 정보
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${record.opponentName} ${record.opponentIsNpc ? "(AI)" : ""}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Lv.${record.opponentLevel} • ${record.timeAgo}',
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
-                ),
-                const SizedBox(height: 2),
-                // 결과 텍스트
-                Text(
-                  resultText,
-                  style: TextStyle(
-                    color: record.isWin ? Colors.green : Colors.red,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // 보상 또는 복수전 버튼
-          if (record.isWin && record.goldEarned > 0)
-            Text(
-              '+${formatNumber(record.goldEarned)}G',
-              style: const TextStyle(color: Colors.amber),
-            )
-          else if (record.isWin && !record.isAttacker)
-            const Text('🛡️', style: TextStyle(fontSize: 20)) // 방어 성공
-          else if (record.isRevengeable)
-            ElevatedButton(
-              onPressed: _battleCount > 0
-                  ? () => _startRevengeMatch(record)
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-              ),
-              child: const Text(
-                '복수전',
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // ✅ 배틀 결과 다이얼로그 (로그 포함)
-  void _showBattleResultDialog({
-    required bool isWin,
-    required String opponentName,
-    required int goldReward,
-    required List<String> logs,
-  }) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF2a2a4a),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: isWin
-                    ? Colors.green.withOpacity(0.2)
-                    : Colors.red.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: isWin ? Colors.green : Colors.red),
-              ),
-              child: Text(
-                isWin ? '🎉 승리!' : '😢 패배',
-                style: TextStyle(
-                  color: isWin ? Colors.green : Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'vs $opponentName',
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 300,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 보상 표시
-              if (isWin)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('💰', style: TextStyle(fontSize: 18)),
-                      const SizedBox(width: 8),
-                      Text(
-                        '+${formatNumber(goldReward)} 골드 획득!',
-                        style: const TextStyle(
-                          color: Colors.amber,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              const Text(
-                '📜 배틀 로그',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-              const SizedBox(height: 8),
-
-              // 배틀 로그
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: ListView.builder(
-                    itemCount: logs.length,
-                    itemBuilder: (_, i) {
-                      final log = logs[i];
-                      Color logColor = Colors.white70;
-                      if (log.contains('크리티컬') || log.contains('치명타')) {
-                        logColor = Colors.orange;
-                      } else if (log.contains('회복') || log.contains('흡혈')) {
-                        logColor = Colors.green;
-                      } else if (log.contains('기절') || log.contains('실패')) {
-                        logColor = Colors.red;
-                      } else if (log.contains('승리')) {
-                        logColor = Colors.amber;
-                      }
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          '${i + 1}. $log',
-                          style: TextStyle(
-                            color: logColor,
-                            fontSize: 12,
-                            height: 1.3,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('확인'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ✅ 복수전 시작 함수 (상대방 실시간 정보 사용)
-  Future<void> _startRevengeMatch(BattleRecord record) async {
-    // NPC면 바로 배틀
-    if (record.opponentIsNpc) {
-      final oppElement = GameElement.values.firstWhere(
-        (e) => e.name == record.opponentElement,
-        orElse: () => GameElement.fire,
-      );
-      _startBattle(
-        playerOpponent: {
-          'id': record.opponentId,
-          'name': record.opponentName,
-          'swordLevel': record.opponentLevel,
-          'swordGrade': SwordGrade.values.firstWhere(
-            (g) => g.name == record.opponentGrade,
-            orElse: () => SwordGrade.normal,
-          ),
-          'isNpc': true,
-          'power': 100 + record.opponentLevel * 10,
-          'element': oppElement,
-        },
-        isRevenge: true,
-      );
-      return;
-    }
-
-    // 온라인 플레이어면 실시간 정보 가져오기
-    if (_onlineService == null) {
-      _showNotification('오프라인 상태에서는 복수전이 불가능합니다');
-      return;
-    }
-
-    _showNotification('상대방 정보를 불러오는 중...');
-
-    try {
-      final profile = await _onlineService!.fetchById(record.opponentId);
-
-      if (profile == null) {
-        _showNotification('상대방을 찾을 수 없습니다');
-        return;
-      }
-
-      // 검이 없는 경우 체크
-      if (profile.swordId.isEmpty ||
-          profile.swordId == 'sword_001' && profile.swordLevel == 0) {
-        _showNotification('현재 상대방이 장착중인 검이 없습니다');
-        return;
-      }
-
-      // 실시간 정보로 배틀 시작
-      _startBattle(
-        playerOpponent: {
-          'id': profile.userId,
-          'name': profile.nickname,
-          'swordLevel': profile.swordLevel,
-          'swordGrade': profile.grade,
-          'swordId': profile.swordId,
-          'isNpc': false,
-          'power': profile.power,
-          'element': profile.element,
-        },
-        isRevenge: true,
-      );
-    } catch (e) {
-      debugPrint('복수전 상대 정보 로드 실패: $e');
-      _showNotification('상대방 정보를 불러오지 못했습니다');
-    }
-  }
-
-  // ✅ 지정 배틀 화면 열기
+  // ===== ?몃깽?좊━/媛뺥솕/諛고?/?붾낫湲??섏씠吏 (媛꾨왂?? =====
   Future<void> _showBattleSelectScreen() async {
-    final result = await Navigator.push(
+    final selected = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => BattleSelectScreen(
@@ -5504,341 +3985,75 @@ class _GameScreenState extends State<GameScreen>
       ),
     );
 
-    if (result != null && result is OpponentEntry) {
-      // 🔥 NPC가 아니면 실시간 정보 조회 (복수전과 동일)
-      if (!result.isNpc && _onlineService != null) {
-        try {
-          final profile = await _onlineService!.fetchById(result.id);
-          if (profile == null) {
-            _showNotification('상대방 정보를 불러오지 못했습니다');
-            return;
-          }
-
-          // 검이 없는 경우 체크
-          if (profile.swordId.isEmpty) {
-            _showNotification('현재 상대방이 장착중인 검이 없습니다');
-            return;
-          }
-
-          // 🔥 실시간 정보로 배틀 시작
-          _startBattle(
-            playerOpponent: {
-              'id': profile.userId,
-              'name': profile.nickname,
-              'swordLevel': profile.swordLevel,
-              'swordGrade': profile.grade,
-              'swordId': profile.swordId,
-              'isNpc': false,
-              'power': profile.power,
-              'element': profile.element,
-            },
-          );
-        } catch (e) {
-          debugPrint('지정 배틀 상대 정보 로드 실패: $e');
-          _showNotification('상대방 정보를 불러오지 못했습니다');
-        }
-      } else {
-        // NPC는 기존 데이터 사용
-        _startBattle(
-          playerOpponent: {
-            'id': result.id,
-            'name': result.name,
-            'swordLevel': result.swordLevel,
-            'swordGrade': result.sword.grade,
-            'swordId': result.sword.id,
-            'isNpc': result.isNpc,
-            'power': result.power,
-            'element': result.sword.element,
-          },
-        );
-      }
-    }
-  }
-
-  Widget _buildMorePage() {
-    final adService = AdService();
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildMoreItem('🎰', '검 뽑기', '새로운 검을 뽑아보세요', _showGachaDialog),
-        _buildMoreItem('🔄', '합성', '검 3개로 상위 등급 도전', _showSynthesisDialog),
-        _buildMoreItem('🐉', '보스 레이드', '강력한 보스에 도전', _showBossSelectDialog),
-
-        _buildMoreItem('🏪', '상점', '아이템 구매/인벤 확장', _openShopScreen),
-        _buildMoreItem('🎟️', '시즌 패스', '보상 확인 및 수령', _openSeasonPassScreen),
-        _buildMoreItem('🏅', '업적', '업적/보상 확인', _openAchievementsScreen),
-
-        _buildMoreItem('🏆', '랭킹', '전체 순위 확인', _showRankingDialog),
-        _buildMoreItem(
-          '👥',
-          '친구',
-          '친구 추가/관리',
-          _openFriendsScreen,
-        ), // 👥 친구 메뉴 추가
-        _buildMoreItem('🎖️', '칭호', '획득한 칭호 관리', _showTitleDialog),
-        _buildMoreItem('📚', '도감', '수집한 검 도감', _showCodexDialog),
-        _buildMoreItem('📊', '통계', '게임 통계', _showStatsDialog),
-
-        const SizedBox(height: 16),
-        const Divider(color: Colors.white24),
-
-        // 🎬 광고 보상 섹션
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Text(
-            '🎬 광고 보상',
-            style: TextStyle(
-              color: Colors.amber,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-        ),
-
-        // 무료 고급 뽑기
-        _buildAdRewardItem(
-          Image.asset(
-            'assets/images/home/header/diamond.png',
-            width: 28,
-            height: 28,
-          ),
-          '무료 고급 뽑기',
-          '광고 보고 다이아 뽑기 1회!',
-          adService.getRemainingAdCount(AdRewardType.freeGacha),
-          1,
-          adService.canWatchAd(AdRewardType.freeGacha),
-          _watchAdForFreeGacha,
-        ),
-
-        // 강화석 획득
-        _buildAdRewardItem(
-          Image.asset(
-            'assets/images/home/header/enhance_mythic.png',
-            width: 28,
-            height: 28,
-          ),
-          '강화석 획득',
-          '광고 보고 강화석 3개 획득!',
-          adService.getRemainingAdCount(AdRewardType.stoneReward),
-          3,
-          adService.canWatchAd(AdRewardType.stoneReward),
-          _watchAdForStones,
-        ),
-
-        const SizedBox(height: 16),
-        const Divider(color: Colors.white24),
-        const SizedBox(height: 8),
-
-        // 🌐 공식 웹사이트
-        _buildMoreItem(
-          '🌐',
-          '공식 웹사이트',
-          '공지사항 및 업데이트 정보',
-          () => launchUrl(
-            Uri.parse('https://www.opentheday.site/'),
-            mode: LaunchMode.externalApplication,
-          ),
-        ),
-
-        // 🔥 도움말 추가
-        _buildMoreItem('❓', '도움말', '게임 가이드 및 속성 상성표', _showHelpDialog),
-
-        // ⚙️ 설정 추가
-        _buildMoreItem('⚙️', '설정', '사운드, 알림 설정', _showSettingsDialog),
-
-        // ✅ 로그아웃 버튼
-        _buildMoreItem('🚪', '로그아웃', '계정에서 로그아웃', _showLogoutDialog),
-
-        // ❌ 계정 삭제 버튼
-        _buildMoreItem(
-          '❌',
-          '계정 삭제',
-          '계정 및 모든 데이터 삭제',
-          _showDeleteAccountDialog,
-        ),
-      ],
-    );
-  }
-
-  // 🎬 광고 보상 아이템 위젯
-  Widget _buildAdRewardItem(
-    Widget icon,
-    String title,
-    String sub,
-    int remaining,
-    int max,
-    bool canWatch,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: canWatch ? onTap : null,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: canWatch
-              ? LinearGradient(
-                  colors: [
-                    Colors.green.withOpacity(0.2),
-                    Colors.blue.withOpacity(0.2),
-                  ],
-                )
-              : null,
-          color: canWatch ? null : Colors.grey.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: canWatch
-                ? Colors.green.withOpacity(0.5)
-                : Colors.grey.withOpacity(0.3),
-          ),
-        ),
-        child: Row(
-          children: [
-            SizedBox(width: 32, height: 32, child: Center(child: icon)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: canWatch ? Colors.white : Colors.grey,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    sub,
-                    style: TextStyle(
-                      color: canWatch ? Colors.white54 : Colors.grey,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: canWatch ? Colors.green : Colors.grey,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                canWatch ? '🎬 $remaining/$max' : '완료',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 🎬 광고로 무료 고급 뽑기
-  void _watchAdForFreeGacha() async {
-    // ⚠️ 인벤토리 체크 (광고 소모 전 차단)
-    if (_inventory.length >= _maxInventory) {
-      _showNotification('인벤토리가 가득 찼습니다! 검을 판매하거나 확장하세요.');
-      return;
-    }
-
-    final adService = AdService();
-
-    if (!adService.isRewardedAdReady) {
-      _showNotification('광고를 불러오는 중...');
-      return;
-    }
-
-    await adService.showRewardedAd(
-      type: AdRewardType.freeGacha,
-      onRewarded: () {
-        // 고급 뽑기 1회 실행
-        _doPremiumGacha(1, isFree: true);
+    if (selected is! OpponentEntry) return;
+    _startBattle(
+      playerOpponent: {
+        'id': selected.id,
+        'name': selected.name,
+        'power': selected.power,
+        'swordGrade': selected.sword.grade,
+        'swordId': selected.sword.id,
+        'element': selected.sword.element,
+        'swordLevel': selected.swordLevel,
+        'isNpc': selected.isNpc,
       },
-      onError: (msg) => _showNotification(msg),
     );
   }
 
-  // 🎬 광고로 강화석 획득
-  void _watchAdForStones() async {
-    final adService = AdService();
+  Future<void> _startRevengeMatch(BattleRecord record) async {
+    final grade = SwordGrade.values.firstWhere(
+      (g) => g.name == record.opponentGrade,
+      orElse: () => SwordGrade.normal,
+    );
+    final element = GameElement.values.firstWhere(
+      (e) => e.name == record.opponentElement,
+      orElse: () => GameElement.fire,
+    );
 
-    if (!adService.isRewardedAdReady) {
-      _showNotification('광고를 불러오는 중...');
-      return;
-    }
+    _startBattle(
+      playerOpponent: {
+        'id': record.opponentId,
+        'name': record.opponentName,
+        'swordGrade': grade,
+        'element': element,
+        'swordLevel': record.opponentLevel,
+        'isNpc': record.opponentIsNpc,
+      },
+      isRevenge: true,
+    );
+  }
 
-    await adService.showRewardedAd(
+  void _watchAdForFreeGacha() {
+    AdService().showRewardedAd(
+      type: AdRewardType.freeGacha,
+      onRewarded: () => _doPremiumGacha(1, isFree: true),
+      onError: (err) => _showNotification(err),
+    );
+  }
+
+  void _watchAdForStones() {
+    const rewardStones = 10;
+    AdService().showRewardedAd(
       type: AdRewardType.stoneReward,
       onRewarded: () {
         setState(() {
-          _enhanceStone += 3;
-          _showImageNotification(
-            '강화석 3개 획득!',
-            'assets/images/home/header/enhance_mythic.png',
-          );
+          _enhanceStone += rewardStones;
           _saveGameData();
         });
+        _showNotification('강화석 $rewardStones개 획득!');
       },
-      onError: (msg) => _showNotification(msg),
+      onError: (err) => _showNotification(err),
     );
   }
 
-  Widget _buildMoreItem(
-    String icon,
-    String title,
-    String sub,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: AppDecorations.card(),
-        child: Row(
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 28)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    sub,
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: Colors.white54),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ✅ 로그아웃 확인 다이얼로그
   void _showLogoutDialog() {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF2a2a4a),
-        title: const Text('🚪 로그아웃', style: TextStyle(color: Colors.white)),
+        title: const Text('로그아웃', style: TextStyle(color: Colors.white)),
         content: const Text(
-          '정말 로그아웃 하시겠습니까?\n\n게임 데이터는 저장되어 있으며,\n다시 로그인하면 이어서 플레이할 수 있습니다.',
+          '?뺣쭚 濡쒓렇?꾩썐 ?섏떆寃좎뒿?덇퉴?\n\n寃뚯엫 ?곗씠?곕뒗 ??λ릺???덉쑝硫?\n?ㅼ떆 濡쒓렇?명븯硫??댁뼱???뚮젅?댄븷 ???덉뒿?덈떎.',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -5859,26 +4074,26 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // ✅ 실제 로그아웃 처리
+  // ???ㅼ젣 濡쒓렇?꾩썐 泥섎━
   Future<void> _performLogout() async {
     try {
-      // ✅ 1단계: 캐시에만 쓰기 (saveToCloud 호출 안 함!)
-      //    → fire-and-forget 저장이 signOut 후 실패하여
-      //      _saveToLocalBackup으로 데이터 누출되는 것 방지
+      // ??1?④퀎: 罹먯떆?먮쭔 ?곌린 (saveToCloud ?몄텧 ????)
+      //    ??fire-and-forget ??μ씠 signOut ???ㅽ뙣?섏뿬
+      //      _saveToLocalBackup?쇰줈 ?곗씠???꾩텧?섎뒗 寃?諛⑹?
       _saveGameData(cloudSave: false);
 
-      // ✅ 2단계: 단 한 번만 강제 저장 (디바운싱 무시, await 완료 보장)
+      // ??2?④퀎: ????踰덈쭔 媛뺤젣 ???(?붾컮?댁떛 臾댁떆, await ?꾨즺 蹂댁옣)
       await _storage.saveToCloud(force: true);
 
-      // ✅ 3단계: Firebase 로그아웃
+      // ??3?④퀎: Firebase 濡쒓렇?꾩썐
       await AuthService().signOut();
 
-      // ✅ 4단계: 모든 서비스의 로컬 상태 완전 초기화
+      // ??4?④퀎: 紐⑤뱺 ?쒕퉬?ㅼ쓽 濡쒖뺄 ?곹깭 ?꾩쟾 珥덇린??
       await StorageService().resetForLogout();
       await AdService().resetForLogout();
       await PurchaseService().resetForLogout();
 
-      // 로그인 화면으로 이동 (모든 화면 제거)
+      // 濡쒓렇???붾㈃?쇰줈 ?대룞 (紐⑤뱺 ?붾㈃ ?쒓굅)
       if (mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
       }
@@ -5887,7 +4102,7 @@ class _GameScreenState extends State<GameScreen>
     }
   }
 
-  // ❌ 계정 삭제 확인 다이얼로그
+  // ??怨꾩젙 ??젣 ?뺤씤 ?ㅼ씠?쇰줈洹?
   void _showDeleteAccountDialog() {
     final TextEditingController confirmController = TextEditingController();
 
@@ -5895,16 +4110,16 @@ class _GameScreenState extends State<GameScreen>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF2a2a4a),
-        title: const Text('❌ 계정 삭제', style: TextStyle(color: Colors.red)),
+        title: const Text('계정 삭제', style: TextStyle(color: Colors.red)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                '⚠️ 경고: 이 작업은 되돌릴 수 없습니다!\n\n'
-                '계정을 삭제하면 모든 데이터가 삭제됩니다.\n\n'
-                '정말 삭제하시려면 "삭제합니다"를 입력하세요:',
+                '?좑툘 寃쎄퀬: ???묒뾽? ?섎룎由????놁뒿?덈떎!\n\n'
+                '怨꾩젙????젣?섎㈃ 紐⑤뱺 ?곗씠?곌? ??젣?⑸땲??\n\n'
+                '?뺣쭚 ??젣?섏떆?ㅻ㈃ "??젣?⑸땲??瑜??낅젰?섏꽭??',
                 style: TextStyle(color: Colors.white70, fontSize: 13),
               ),
               const SizedBox(height: 16),
@@ -5932,7 +4147,7 @@ class _GameScreenState extends State<GameScreen>
           ),
           ElevatedButton(
             onPressed: () {
-              if (confirmController.text == '삭제합니다') {
+              if (confirmController.text == '\uC0AD\uC81C\uD569\uB2C8\uB2E4') {
                 Navigator.pop(context);
                 _performDeleteAccount();
               } else {
@@ -5947,57 +4162,57 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // ❌ 실제 계정 삭제 처리
+  // ???ㅼ젣 怨꾩젙 ??젣 泥섎━
   Future<void> _performDeleteAccount() async {
     try {
-      // 로딩 표시
+      // 濡쒕뵫 ?쒖떆
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
 
-      // 1. Firestore 데이터 삭제
+      // 1. Firestore ?곗씠????젣
       final uid = AuthService().uid;
       if (uid != null) {
         await _storage.deleteAllUserData(uid);
       }
 
-      // 2. Firebase Auth 계정 삭제
+      // 2. Firebase Auth 怨꾩젙 ??젣
       final result = await AuthService().deleteAccount();
 
-      // 로딩 닫기
+      // 濡쒕뵫 ?リ린
       if (mounted) Navigator.pop(context);
 
       if (result.isSuccess) {
-        // 3. 로컬 데이터 초기화
-        await _storage.resetForLogout(); // ✅ SharedPreferences 백업 포함 삭제
+        // 3. 濡쒖뺄 ?곗씠??珥덇린??
+        await _storage.resetForLogout(); // ??SharedPreferences 諛깆뾽 ?ы븿 ??젣
         await AdService().resetForLogout();
         await PurchaseService().resetForLogout();
 
-        // 4. 로그인 화면으로 이동
+        // 4. 濡쒓렇???붾㈃?쇰줈 ?대룞
         if (mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         }
       } else if (result.errorMessage == 'REQUIRES_RECENT_LOGIN') {
-        // ✅ 재인증 필요 - 비밀번호 입력 다이얼로그 표시
+        // ???ъ씤利??꾩슂 - 鍮꾨?踰덊샇 ?낅젰 ?ㅼ씠?쇰줈洹??쒖떆
         _showReauthenticateDialog();
       } else {
         _showNotification('계정 삭제 실패: ${result.errorMessage}');
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context); // 로딩 닫기
+      if (mounted) Navigator.pop(context); // 濡쒕뵫 ?リ린
       _showNotification('계정 삭제 실패: $e');
     }
   }
 
-  // ✅ 재인증 다이얼로그
+  // ???ъ씤利??ㅼ씠?쇰줈洹?
   void _showReauthenticateDialog() {
     final passwordController = TextEditingController();
     final user = AuthService().currentUser;
     final email = user?.email ?? '';
 
-    // 익명 계정이면 바로 재로그인 안내
+    // ?듬챸 怨꾩젙?대㈃ 諛붾줈 ?щ줈洹몄씤 ?덈궡
     if (user?.isAnonymous == true) {
       showDialog(
         context: context,
@@ -6005,8 +4220,8 @@ class _GameScreenState extends State<GameScreen>
           backgroundColor: const Color(0xFF2a2a4a),
           title: const Text('재로그인 필요', style: TextStyle(color: Colors.white)),
           content: const Text(
-            '보안을 위해 다시 로그인이 필요합니다.\n\n'
-            '로그아웃 후 다시 로그인해주세요.',
+            '蹂댁븞???꾪빐 ?ㅼ떆 濡쒓렇?몄씠 ?꾩슂?⑸땲??\n\n'
+            '濡쒓렇?꾩썐 ???ㅼ떆 濡쒓렇?명빐二쇱꽭??',
             style: TextStyle(color: Colors.white70),
           ),
           actions: [
@@ -6018,7 +4233,7 @@ class _GameScreenState extends State<GameScreen>
               onPressed: () async {
                 Navigator.pop(context);
                 await AuthService().signOut();
-                // ✅ 로컬 캐시 초기화 (SharedPreferences 백업 포함 삭제)
+                // ??濡쒖뺄 罹먯떆 珥덇린??(SharedPreferences 諛깆뾽 ?ы븿 ??젣)
                 await StorageService().resetForLogout();
                 await AdService().resetForLogout();
                 await PurchaseService().resetForLogout();
@@ -6047,12 +4262,12 @@ class _GameScreenState extends State<GameScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '보안을 위해 비밀번호를 다시 입력해주세요.',
+              '蹂댁븞???꾪빐 鍮꾨?踰덊샇瑜??ㅼ떆 ?낅젰?댁＜?몄슂.',
               style: TextStyle(color: Colors.white70, fontSize: 13),
             ),
             const SizedBox(height: 8),
             Text(
-              '계정: $email',
+              '怨꾩젙: $email',
               style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
             const SizedBox(height: 16),
@@ -6091,7 +4306,7 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // ✅ 재인증 후 삭제
+  // ???ъ씤利?????젣
   Future<void> _reauthenticateAndDelete(String email, String password) async {
     try {
       showDialog(
@@ -6100,7 +4315,7 @@ class _GameScreenState extends State<GameScreen>
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
 
-      // 재인증
+      // ?ъ씤利?
       final reauthResult = await AuthService().reauthenticateWithEmail(
         email: email,
         password: password,
@@ -6112,13 +4327,13 @@ class _GameScreenState extends State<GameScreen>
         return;
       }
 
-      // 재인증 성공 → 계정 삭제
+      // ?ъ씤利??깃났 ??怨꾩젙 ??젣
       final deleteResult = await AuthService().deleteAccount();
 
       if (mounted) Navigator.pop(context);
 
       if (deleteResult.isSuccess) {
-        await _storage.resetForLogout(); // ✅ SharedPreferences 백업 포함 삭제
+        await _storage.resetForLogout(); // ??SharedPreferences 諛깆뾽 ?ы븿 ??젣
         await AdService().resetForLogout();
         await PurchaseService().resetForLogout();
         if (mounted) {
@@ -6130,6 +4345,52 @@ class _GameScreenState extends State<GameScreen>
     } catch (e) {
       if (mounted) Navigator.pop(context);
       _showNotification('계정 삭제 실패: $e');
+    }
+  }
+
+  Future<void> _openMinigame() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BrickBreakerScreen(
+          inventory: _inventory,
+          gold: _gold,
+          diamond: _diamond,
+          enhanceStone: _enhanceStone,
+        ),
+      ),
+    );
+
+    if (result is Map) {
+      setState(() {
+        _gold = result['gold'] as int? ?? _gold;
+        _diamond = result['diamond'] as int? ?? _diamond;
+        _enhanceStone = result['enhanceStone'] as int? ?? _enhanceStone;
+        _saveGameData();
+      });
+    }
+  }
+
+  Future<void> _openInfiniteTower() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InfiniteTowerScreen(
+          inventory: _inventory,
+          gold: _gold,
+          diamond: _diamond,
+          enhanceStone: _enhanceStone,
+        ),
+      ),
+    );
+
+    if (result is Map) {
+      setState(() {
+        _gold = result['gold'] as int? ?? _gold;
+        _diamond = result['diamond'] as int? ?? _diamond;
+        _enhanceStone = result['enhanceStone'] as int? ?? _enhanceStone;
+        _saveGameData();
+      });
     }
   }
 
@@ -6176,8 +4437,8 @@ class _GameScreenState extends State<GameScreen>
           hasPremiumPass: _hasPremiumPass,
           claimedPremiumRewards: _claimedPremiumRewards,
           diamond: _diamond,
-          todaySeasonExp: _todaySeasonExp, // ✅ 추가
-          maxDailySeasonExp: _maxDailySeasonExp, // ✅ 추가
+          todaySeasonExp: _todaySeasonExp, // ??異붽?
+          maxDailySeasonExp: _maxDailySeasonExp, // ??異붽?
           onClaimFreeReward: (int level) {
             if (_claimedSeasonRewards.contains(level)) return;
             if (_seasonPassLevel < level) return;
@@ -6193,10 +4454,10 @@ class _GameScreenState extends State<GameScreen>
               _diamond += reward.diamond;
               _enhanceStone += reward.stone;
               _showNotification(
-                '일반 보상 수령! '
+                '?쇰컲 蹂댁긽 ?섎졊! '
                 '+${formatNumber(reward.gold)}G'
-                '${reward.diamond > 0 ? ' +${reward.diamond}💎' : ''}'
-                '${reward.stone > 0 ? ' +${reward.stone}🔮' : ''}',
+                '${reward.diamond > 0 ? ' +${reward.diamond}?뭿' : ''}'
+                '${reward.stone > 0 ? ' +${reward.stone}?뵰' : ''}',
               );
               _saveGameData();
             });
@@ -6217,10 +4478,10 @@ class _GameScreenState extends State<GameScreen>
               _diamond += reward.premiumDiamond;
               _enhanceStone += reward.premiumStone;
               _showNotification(
-                '👑 프리미엄 보상 수령! '
+                '?몣 ?꾨━誘몄뾼 蹂댁긽 ?섎졊! '
                 '+${formatNumber(reward.premiumGold)}G'
-                '${reward.premiumDiamond > 0 ? ' +${reward.premiumDiamond}💎' : ''}'
-                '${reward.premiumStone > 0 ? ' +${reward.premiumStone}🔮' : ''}',
+                '${reward.premiumDiamond > 0 ? ' +${reward.premiumDiamond}?뭿' : ''}'
+                '${reward.premiumStone > 0 ? ' +${reward.premiumStone}?뵰' : ''}',
               );
               _saveGameData();
             });
@@ -6230,7 +4491,7 @@ class _GameScreenState extends State<GameScreen>
               _showNotification('이미 프리미엄 패스를 보유하고 있습니다');
               return;
             }
-            // 💰 인앱 결제 시작
+            // ?뮥 ?몄빋 寃곗젣 ?쒖옉
             _purchaseService.purchaseByShopId('premium_pass');
           },
         ),
@@ -6239,7 +4500,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   Future<void> _openAchievementsScreen() async {
-    // 최신 언락 갱신 (변경 시에만 저장 - Firebase 비용 절감)
+    // 理쒖떊 ?몃씫 媛깆떊 (蹂寃??쒖뿉留????- Firebase 鍮꾩슜 ?덇컧)
     final prevCount = _unlockedAchievements.length;
     _checkAchievementsFull();
     if (_unlockedAchievements.length > prevCount) {
@@ -6291,9 +4552,9 @@ class _GameScreenState extends State<GameScreen>
               _diamond += ach.rewardDiamond;
               _enhanceStone += ach.rewardStone;
               _showNotification(
-                '업적 보상 수령! +${formatNumber(ach.rewardGold)}G'
-                '${ach.rewardDiamond > 0 ? ' +${ach.rewardDiamond}💎' : ''}'
-                '${ach.rewardStone > 0 ? ' +${ach.rewardStone}🔮' : ''}',
+                '?낆쟻 蹂댁긽 ?섎졊! +${formatNumber(ach.rewardGold)}G'
+                '${ach.rewardDiamond > 0 ? ' +${ach.rewardDiamond}?뭿' : ''}'
+                '${ach.rewardStone > 0 ? ' +${ach.rewardStone}?뵰' : ''}',
               );
               _saveGameData();
             });
@@ -6303,7 +4564,7 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // 👥 친구 화면 열기
+  // ?뫁 移쒓뎄 ?붾㈃ ?닿린
   void _openFriendsScreen() {
     Navigator.push(
       context,
@@ -6322,20 +4583,20 @@ class _GameScreenState extends State<GameScreen>
 
   void _showSwordDetailDialog(OwnedSword sword) {
     final isEquipped = _equippedSword?.uid == sword.uid;
-    final canSell = true; // 🔥 검 1개여도 판매 가능
+    final canSell = true; // ?뵦 寃 1媛쒖뿬???먮ℓ 媛??
 
     showDialog(
       context: context,
       builder: (_) => SwordDetailDialog(
         sword: sword,
         isEquipped: isEquipped,
-        canSell: canSell, // ✅ 추가
+        canSell: canSell, // ??異붽?
         onEquip: () {
           setState(() => _equippedSword = sword);
           _storage.equippedSwordUid = sword.uid;
           _updateRankings();
           _saveGameData();
-          _syncMyProfile(); // 🔥 장비 변경 시에만 프로필 동기화
+          _syncMyProfile(); // ?뵦 ?λ퉬 蹂寃??쒖뿉留??꾨줈???숆린??
           _showNotification('${sword.data.name} 장착!');
         },
         onSell: () => _sellSword(sword),
@@ -6366,7 +4627,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   // =====================================================
-  // 🎰 뽑기 결과 다이얼로그 (단일)
+  // ?렟 戮묎린 寃곌낵 ?ㅼ씠?쇰줈洹?(?⑥씪)
   // =====================================================
   void _showGachaResultDialog(
     OwnedSword sword, {
@@ -6375,7 +4636,7 @@ class _GameScreenState extends State<GameScreen>
   }) {
     final grade = sword.data.grade;
 
-    // 🔊 뽑기 사운드 (유니크 이상이면 레어 사운드)
+    // ?뵄 戮묎린 ?ъ슫??(?좊땲???댁긽?대㈃ ?덉뼱 ?ъ슫??
     if (grade.index >= SwordGrade.unique.index) {
       SoundService().playGachaRare();
     } else {
@@ -6404,7 +4665,7 @@ class _GameScreenState extends State<GameScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 헤더
+              // ?ㅻ뜑
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -6424,8 +4685,8 @@ class _GameScreenState extends State<GameScreen>
                   children: [
                     Text(
                       isFree
-                          ? '🎬 무료 고급 뽑기!'
-                          : (isPremium ? '💎 고급 뽑기 결과!' : '🎰 뽑기 결과!'),
+                          ? '?렗 臾대즺 怨좉툒 戮묎린!'
+                          : (isPremium ? '?뭿 怨좉툒 戮묎린 寃곌낵!' : '?렟 戮묎린 寃곌낵!'),
                       style: TextStyle(
                         color: grade.color,
                         fontSize: 18,
@@ -6454,19 +4715,20 @@ class _GameScreenState extends State<GameScreen>
                 ),
               ),
 
-              // 검 이미지
+              // 寃 ?대?吏
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: SwordImageWidget(
                   grade: grade,
                   element: sword.data.element,
+                  swordId: sword.data.id,
                   level: sword.level,
                   size: 140,
                   showPulse: true,
                 ),
               ),
 
-              // 검 정보
+              // 寃 ?뺣낫
               Text(
                 sword.data.name,
                 style: const TextStyle(
@@ -6480,7 +4742,7 @@ class _GameScreenState extends State<GameScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '⚡ ${sword.totalPower}',
+                    '??${sword.totalPower}',
                     style: const TextStyle(color: Colors.amber, fontSize: 14),
                   ),
                   const SizedBox(width: 16),
@@ -6491,7 +4753,7 @@ class _GameScreenState extends State<GameScreen>
                 ],
               ),
 
-              // 확인 버튼
+              // ?뺤씤 踰꾪듉
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: SizedBox(
@@ -6507,7 +4769,7 @@ class _GameScreenState extends State<GameScreen>
                       ),
                     ),
                     child: const Text(
-                      '확인',
+                      '?뺤씤',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -6524,10 +4786,10 @@ class _GameScreenState extends State<GameScreen>
   }
 
   // =====================================================
-  // 💎 고급 뽑기
+  // ?뭿 怨좉툒 戮묎린
   // =====================================================
   void _doPremiumGacha(int count, {bool isFree = false}) {
-    // 비용 계산
+    // 鍮꾩슜 怨꾩궛
     int cost;
     bool guaranteeUnique = false;
 
@@ -6537,12 +4799,12 @@ class _GameScreenState extends State<GameScreen>
       cost = premiumGachaCost5x;
     } else {
       cost = premiumGachaCost10x;
-      guaranteeUnique = true; // 10회시 유니크 이상 1개 확정
+      guaranteeUnique = true; // 10?뚯떆 ?좊땲???댁긽 1媛??뺤젙
     }
 
-    // 무료가 아닐 때만 비용 체크
+    // 臾대즺媛 ?꾨땺 ?뚮쭔 鍮꾩슜 泥댄겕
     if (!isFree && _diamond < cost) {
-      _showNotification('다이아몬드가 부족합니다!');
+      _showNotification('다이아가 부족합니다!');
       return;
     }
 
@@ -6551,12 +4813,12 @@ class _GameScreenState extends State<GameScreen>
       return;
     }
 
-    // 📊 Analytics용
+    // ?뱤 Analytics??
     final newSwords = <OwnedSword>[];
     OwnedSword? bestSword;
 
     setState(() {
-      // 무료가 아닐 때만 비용 차감
+      // 臾대즺媛 ?꾨땺 ?뚮쭔 鍮꾩슜 李④컧
       if (!isFree) {
         _diamond -= cost;
       }
@@ -6573,12 +4835,12 @@ class _GameScreenState extends State<GameScreen>
         _inventory.add(newSword);
         _codex.add(swordData.id);
 
-        // 유니크 이상 체크
+        // ?좊땲???댁긽 泥댄겕
         if (swordData.grade.index >= SwordGrade.unique.index) {
           hasUniqueOrHigher = true;
         }
 
-        // 📊 최고 등급 추적
+        // ?뱤 理쒓퀬 ?깃툒 異붿쟻
         if (highestGrade == null ||
             swordData.grade.index > highestGrade.index) {
           highestGrade = swordData.grade;
@@ -6586,21 +4848,21 @@ class _GameScreenState extends State<GameScreen>
         }
       }
 
-      // 10회 뽑기인데 유니크 이상이 없으면 마지막 검을 유니크로 교체
+      // 10??戮묎린?몃뜲 ?좊땲???댁긽???놁쑝硫?留덉?留?寃???좊땲?щ줈 援먯껜
       if (guaranteeUnique && !hasUniqueOrHigher) {
-        // 마지막 검 제거
+        // 留덉?留?寃 ?쒓굅
         _inventory.remove(newSwords.last);
 
-        // 유니크 이상 확정 뽑기
+        // ?좊땲???댁긽 ?뺤젙 戮묎린
         final guaranteedSword = _rollGuaranteedUniqueOrHigher();
         final newSword = createNewSword(guaranteedSword);
         newSwords[newSwords.length - 1] = newSword;
         _inventory.add(newSword);
         _codex.add(guaranteedSword.id);
-        bestSword = newSword; // 📊 확정 뽑기가 최고 등급
+        bestSword = newSword; // ?뱤 ?뺤젙 戮묎린媛 理쒓퀬 ?깃툒
       }
 
-      // 결과 표시 (무료면 메시지 추가)
+      // 寃곌낵 ?쒖떆 (臾대즺硫?硫붿떆吏 異붽?)
       if (count == 1) {
         _showGachaResultDialog(
           newSwords.first,
@@ -6618,7 +4880,7 @@ class _GameScreenState extends State<GameScreen>
       _saveGameData();
     });
 
-    // 📊 Analytics (fire-and-forget)
+    // ?뱤 Analytics (fire-and-forget)
     if (bestSword != null) {
       AnalyticsService().logGacha(
         type: 'premium',
@@ -6628,7 +4890,7 @@ class _GameScreenState extends State<GameScreen>
     }
   }
 
-  // 💎 고급 뽑기 확률
+  // ?뭿 怨좉툒 戮묎린 ?뺣쪧
   SwordData _rollPremiumGacha() {
     final roll = _random.nextDouble() * 100;
     double cumulative = 0;
@@ -6641,14 +4903,14 @@ class _GameScreenState extends State<GameScreen>
       }
     }
 
-    // 기본값: 레어
+    // 湲곕낯媛? ?덉뼱
     final rareSwords = getSwordsByGrade(SwordGrade.rare);
     return rareSwords[_random.nextInt(rareSwords.length)];
   }
 
-  // 유니크 이상 확정 뽑기 (10회 보너스용)
+  // ?좊땲???댁긽 ?뺤젙 戮묎린 (10??蹂대꼫?ㅼ슜)
   SwordData _rollGuaranteedUniqueOrHigher() {
-    // 유니크 이상만 있는 확률 테이블
+    // ?좊땲???댁긽留??덈뒗 ?뺣쪧 ?뚯씠釉?
     const guaranteedProbability = {
       SwordGrade.unique: 80.0,
       SwordGrade.legend: 15.0,
@@ -6667,12 +4929,12 @@ class _GameScreenState extends State<GameScreen>
       }
     }
 
-    // 기본값: 유니크
+    // 湲곕낯媛? ?좊땲??
     final uniqueSwords = getSwordsByGrade(SwordGrade.unique);
     return uniqueSwords[_random.nextInt(uniqueSwords.length)];
   }
 
-  // 다중 뽑기 결과 다이얼로그 (고급 뽑기용 확장)
+  // ?ㅼ쨷 戮묎린 寃곌낵 ?ㅼ씠?쇰줈洹?(怨좉툒 戮묎린???뺤옣)
   void _showMultiGachaResultDialog(
     List<OwnedSword> swords, {
     bool isPremium = false,
@@ -6692,7 +4954,7 @@ class _GameScreenState extends State<GameScreen>
           children: [
             Flexible(
               child: Text(
-                isPremium ? '💎 고급 뽑기' : '🎰 뽑기 결과',
+                isPremium ? '?뭿 怨좉툒 戮묎린' : '?렟 戮묎린 寃곌낵',
                 style: const TextStyle(color: Colors.white, fontSize: 16),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -6706,7 +4968,7 @@ class _GameScreenState extends State<GameScreen>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
-                  '✨ 확정',
+                  '???뺤젙',
                   style: TextStyle(color: Colors.amber, fontSize: 10),
                 ),
               ),
@@ -6718,7 +4980,7 @@ class _GameScreenState extends State<GameScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 최고 등급 표시
+              // 理쒓퀬 ?깃툒 ?쒖떆
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -6748,7 +5010,7 @@ class _GameScreenState extends State<GameScreen>
               ),
               const SizedBox(height: 16),
 
-              // 검 그리드
+              // 寃 洹몃━??
               SizedBox(
                 height: 200,
                 child: GridView.builder(
@@ -6786,10 +5048,11 @@ class _GameScreenState extends State<GameScreen>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // ✅ 이모지 대신 SwordImageWidget 사용
+                          // ???대え吏 ???SwordImageWidget ?ъ슜
                           SwordImageWidget(
                             grade: sword.data.grade,
                             element: sword.data.element,
+                            swordId: sword.data.id,
                             level: sword.level,
                             size: 32,
                             showPulse: false,
@@ -6809,7 +5072,7 @@ class _GameScreenState extends State<GameScreen>
                 ),
               ),
 
-              // 등급별 카운트
+              // ?깃툒蹂?移댁슫??
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -6893,7 +5156,7 @@ class _GameScreenState extends State<GameScreen>
         normalToRarePity: _normalToRarePity,
         rareToUniquePity: _rareToUniquePity,
         uniqueToLegendPity: _uniqueToLegendPity,
-        // 🔥 합성 후 새 pity 값 반환
+        // ?뵦 ?⑹꽦 ????pity 媛?諛섑솚
         onSynthesize: (selectedSwords, {bool showResult = true}) {
           _synthesize(selectedSwords, showResult: showResult);
           return {
@@ -6909,264 +5172,25 @@ class _GameScreenState extends State<GameScreen>
   void _showBossSelectDialog() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF2a2a4a),
-        title: Row(
-          children: [
-            const Expanded(
-              child: Text('🐉 보스 레이드', style: TextStyle(color: Colors.white)),
-            ),
-            Text(
-              '🧿 $_bossCore',
-              style: const TextStyle(color: Color(0xFF80DEEA), fontSize: 14),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: allBosses.length,
-            itemBuilder: (_, i) {
-              final boss = allBosses[i];
-              final cd = _bossCooldowns[boss.id];
-              final now = _storage.serverNow; // ✅ 서버 시간
-              final onCooldown = cd != null && cd.isAfter(now);
-
-              // ✅ 최소 레벨 조건
-              final myLevel = _equippedSword?.level ?? 0;
-              final canChallenge =
-                  (myLevel >= boss.minLevel) && _equippedSword != null;
-
-              // 🔥 상성 계산
-              final myElement = _equippedSword?.data.element;
-              String? advantageText;
-              Color? advantageColor;
-              if (myElement != null) {
-                if (myElement.strongAgainst == boss.element) {
-                  advantageText = '유리 ▲';
-                  advantageColor = Colors.green;
-                } else if (myElement.weakAgainst == boss.element) {
-                  advantageText = '불리 ▼';
-                  advantageColor = Colors.red;
-                }
-              }
-
-              // ✅ 쿨다운 남은 시간 계산
-              String cooldownText = '';
-              if (onCooldown) {
-                final remaining = cd!.difference(now);
-                if (remaining.inHours > 0) {
-                  cooldownText =
-                      '${remaining.inHours}시간 ${remaining.inMinutes % 60}분';
-                } else {
-                  cooldownText = '${remaining.inMinutes}분';
-                }
-              }
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: boss.element.color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: boss.element.color.withOpacity(0.3),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 보스 이름 & 난이도
-                    Row(
-                      children: [
-                        // 보스 이미지 또는 이모지
-                        boss.hasImage
-                            ? ClipOval(
-                                child: Image.asset(
-                                  boss.imagePath!,
-                                  width: 40,
-                                  height: 40,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Text(
-                                      boss.element.emoji,
-                                      style: const TextStyle(fontSize: 28),
-                                    );
-                                  },
-                                ),
-                              )
-                            : Text(
-                                boss.element.emoji,
-                                style: const TextStyle(fontSize: 28),
-                              ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      boss.name,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  // 🔥 상성 표시
-                                  if (advantageText != null) ...[
-                                    const SizedBox(width: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: advantageColor!.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: advantageColor.withOpacity(
-                                            0.5,
-                                          ),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        advantageText,
-                                        style: TextStyle(
-                                          color: advantageColor,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              Text(
-                                '난이도: ${boss.difficulty}',
-                                style: TextStyle(
-                                  color: boss.element.color,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-
-                    // ✅ 보스 스탯 표시 (Wrap으로 오버플로우 방지)
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        _bossStatChip('HP', '${boss.hp}'),
-                        _bossStatChip('ATK', '${boss.atk}'),
-                        _bossStatChip('Lv', '+${boss.minLevel}'),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-
-                    // 보상
-                    Text(
-                      '보상: ${boss.goldReward}G + ${boss.diamondReward}💎'
-                      ' / 코어 ${boss.coreDropMin}~${boss.coreDropMax}개 (${(boss.coreDropChance * 100).round()}%)',
-                      style: const TextStyle(color: Colors.amber, fontSize: 12),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // 도전 버튼 또는 광고 스킵 버튼
-                    if (onCooldown && canChallenge) ...[
-                      // 🎬 광고로 쿨다운 스킵
-                      Column(
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.grey,
-                              ),
-                              child: Text(
-                                '쿨다운 ($cooldownText)',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed:
-                                  AdService().canWatchAd(AdRewardType.bossSkip)
-                                  ? () {
-                                      Navigator.pop(context);
-                                      _watchAdToSkipBossCooldown(boss);
-                                    }
-                                  : null,
-                              icon: const Text(
-                                '🎬',
-                                style: TextStyle(fontSize: 14),
-                              ),
-                              label: Text(
-                                '광고로 스킵 (${AdService().getRemainingAdCount(AdRewardType.bossSkip)}/3)',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ] else ...[
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: (!onCooldown && canChallenge)
-                              ? () {
-                                  Navigator.pop(context);
-                                  _startBossRaid(boss);
-                                }
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: boss.element.color,
-                          ),
-                          child: Text(
-                            !canChallenge
-                                ? '레벨 부족 (+${boss.minLevel} 필요)'
-                                : '도전!',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('닫기'),
-          ),
-        ],
+      useSafeArea: false,
+      builder: (_) => Season1BossSelectDialog(
+        equippedSword: _equippedSword,
+        bossCooldowns: _bossCooldowns,
+        serverNow: _storage.serverNow,
+        bossCore: _bossCore,
+        onChallenge: (boss) {
+          Navigator.pop(context);
+          _startBossRaid(boss);
+        },
+        onSkipCooldown: (boss) {
+          Navigator.pop(context);
+          _watchAdToSkipBossCooldown(boss);
+        },
       ),
     );
   }
 
-  // 🎬 광고로 보스 쿨다운 스킵
+  // ?렗 愿묎퀬濡?蹂댁뒪 荑⑤떎???ㅽ궢
   void _watchAdToSkipBossCooldown(BossData boss) async {
     final adService = AdService();
 
@@ -7179,42 +5203,29 @@ class _GameScreenState extends State<GameScreen>
       type: AdRewardType.bossSkip,
       onRewarded: () {
         setState(() {
-          _bossCooldowns.remove(boss.id); // 쿨다운 제거
-          _showNotification('✨ 쿨다운이 초기화되었습니다!');
+          _bossCooldowns.remove(boss.id); // 荑⑤떎???쒓굅
+          _showNotification('쿨다운이 초기화되었습니다!');
         });
-        // 바로 보스 도전
+        // 諛붾줈 蹂댁뒪 ?꾩쟾
         _startBossRaid(boss);
       },
       onError: (msg) => _showNotification(msg),
     );
   }
 
-  Widget _bossStatChip(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        '$label: $value',
-        style: const TextStyle(color: Colors.white70, fontSize: 11),
-      ),
-    );
-  }
-
   bool _isRankingDialogOpen = false;
 
   void _showRankingDialog() {
-    if (_isRankingDialogOpen) return; // 중복 탭 방지
+    if (_isRankingDialogOpen) return; // 以묐났 ??諛⑹?
+    if (_tryOpenSeason1RankingDialog()) return;
     _isRankingDialogOpen = true;
 
-    // 백그라운드에서 랭킹 갱신 (다이얼로그는 즉시 열림)
+    // 諛깃렇?쇱슫?쒖뿉????궧 媛깆떊 (?ㅼ씠?쇰줈洹몃뒗 利됱떆 ?대┝)
     _fetchOnlineRankings(forceRefresh: true);
 
     bool dialogOpen = true;
     bool isRefreshing = false;
-    int selectedTab = 0; // 0: 검 랭킹, 1: 배틀 전적
+    int selectedTab = 0; // 0: 寃 ??궧, 1: 諛고? ?꾩쟻
 
     showDialog(
       context: context,
@@ -7223,9 +5234,9 @@ class _GameScreenState extends State<GameScreen>
           backgroundColor: const Color(0xFF2a2a4a),
           title: Row(
             children: [
-              const Text('🏆 랭킹', style: TextStyle(color: Colors.white)),
+              const Text('랭킹', style: TextStyle(color: Colors.white)),
               const Spacer(),
-              // ✅ 온라인/오프라인 상태 표시
+              // ???⑤씪???ㅽ봽?쇱씤 ?곹깭 ?쒖떆
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -7244,7 +5255,9 @@ class _GameScreenState extends State<GameScreen>
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      _isOnline ? '온라인' : '오프라인',
+                      _isOnline
+                          ? '\uC628\uB77C\uC778'
+                          : '\uC624\uD504\uB77C\uC778',
                       style: TextStyle(
                         color: _isOnline ? Colors.green : Colors.grey,
                         fontSize: 11,
@@ -7280,7 +5293,7 @@ class _GameScreenState extends State<GameScreen>
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              '검 랭킹',
+                              '? ??',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: selectedTab == 0
@@ -7304,7 +5317,7 @@ class _GameScreenState extends State<GameScreen>
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              '배틀 전적',
+                              '?? ??',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: selectedTab == 1
@@ -7320,7 +5333,7 @@ class _GameScreenState extends State<GameScreen>
                   ),
                 ),
                 const SizedBox(height: 10),
-                // ✅ 내 순위 하이라이트
+                // ?????쒖쐞 ?섏씠?쇱씠??
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -7354,8 +5367,8 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             Text(
                               selectedTab == 0
-                                  ? '전투력: ${formatNumber(_totalPower)}'
-                                  : '$_totalBattleWin승 ${_totalBattle - _totalBattleWin}패',
+                                  ? '?꾪닾?? ${formatNumber(_totalPower)}'
+                                  : '$_totalBattleWin? ${_totalBattle - _totalBattleWin}?',
                               style: const TextStyle(
                                 color: Colors.white54,
                                 fontSize: 12,
@@ -7363,7 +5376,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             if (selectedTab == 1)
                               Text(
-                                '승률 ${_totalBattle > 0 ? ((_totalBattleWin / _totalBattle) * 100).toStringAsFixed(1) : '0.0'}%',
+                                "\uC2B9\uB960 ${_totalBattle > 0 ? ((_totalBattleWin / _totalBattle) * 100).toStringAsFixed(1) : '0.0'}%",
                                 style: const TextStyle(
                                   color: Colors.white38,
                                   fontSize: 11,
@@ -7377,7 +5390,7 @@ class _GameScreenState extends State<GameScreen>
                 ),
                 const SizedBox(height: 12),
 
-                // ✅ 전체 랭킹 목록 (100위까지)
+                // ???꾩껜 ??궧 紐⑸줉 (100?꾧퉴吏)
                 Expanded(
                   child: Builder(
                     builder: (_) {
@@ -7413,7 +5426,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             child: Row(
                               children: [
-                                // 순위
+                                // ?쒖쐞
                                 SizedBox(
                                   width: 40,
                                   child: Text(
@@ -7431,19 +5444,20 @@ class _GameScreenState extends State<GameScreen>
                                     ),
                                   ),
                                 ),
-                                // ✅ 검 이미지 (SwordImageWidget으로 변경)
+                                // ??寃 ?대?吏 (SwordImageWidget?쇰줈 蹂寃?
                                 SwordImageWidget(
                                   grade: grade,
                                   element: element,
+                                  swordId: r['swordId'] as String?,
                                   level: swordLevel,
                                   breakthroughLevel:
                                       (r['swordBreakthroughLevel'] as int?) ??
                                       0,
-                                  size: 28, // ✅ 36 → 28로 줄임
+                                  size: 28, // ??36 ??28濡?以꾩엫
                                   showPulse: false,
                                 ),
                                 const SizedBox(width: 8),
-                                // 이름
+                                // ?대쫫
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -7467,15 +5481,15 @@ class _GameScreenState extends State<GameScreen>
                                             ),
                                           ),
                                           const SizedBox(width: 4),
-                                          // ✅ 플레이어 유형 표시
+                                          // ???뚮젅?댁뼱 ?좏삎 ?쒖떆
                                           if (r['isNpc'] == true)
                                             const Text(
-                                              '🤖',
+                                              '?쨼',
                                               style: TextStyle(fontSize: 10),
                                             )
                                           else if (isOnlinePlayer)
                                             const Text(
-                                              '🌐',
+                                              '??',
                                               style: TextStyle(fontSize: 10),
                                             ),
                                         ],
@@ -7483,7 +5497,7 @@ class _GameScreenState extends State<GameScreen>
                                       Text(
                                         selectedTab == 0
                                             ? '${r['swordName']} +${r['swordLevel']}'
-                                            : '$wins승 ${total - wins}패',
+                                            : '$wins\uC2B9 ${total - wins}\uD328',
                                         style: const TextStyle(
                                           color: Colors.white38,
                                           fontSize: 10,
@@ -7491,7 +5505,7 @@ class _GameScreenState extends State<GameScreen>
                                       ),
                                       if (selectedTab == 1)
                                         Text(
-                                          '승률 ${winRate.toStringAsFixed(1)}%',
+                                          '?? ${winRate.toStringAsFixed(1)}%',
                                           style: const TextStyle(
                                             color: Colors.white30,
                                             fontSize: 10,
@@ -7500,11 +5514,11 @@ class _GameScreenState extends State<GameScreen>
                                     ],
                                   ),
                                 ),
-                                // 우측 지표
+                                // ?곗륫 吏??
                                 Text(
                                   selectedTab == 0
                                       ? formatNumber(r['power'] as int)
-                                      : '$wins승',
+                                      : '$wins?',
                                   style: const TextStyle(
                                     color: Colors.white70,
                                     fontSize: 12,
@@ -7522,7 +5536,7 @@ class _GameScreenState extends State<GameScreen>
             ),
           ),
           actions: [
-            // ✅ 새로고침 버튼
+            // ???덈줈怨좎묠 踰꾪듉
             if (_isOnline)
               TextButton.icon(
                 onPressed: isRefreshing
@@ -7549,7 +5563,33 @@ class _GameScreenState extends State<GameScreen>
     ).then((_) {
       dialogOpen = false;
       _isRankingDialogOpen = false;
-    }); // 닫힐 때 플래그 해제
+    }); // ?ロ옄 ???뚮옒洹??댁젣
+  }
+
+  bool _tryOpenSeason1RankingDialog() {
+    _isRankingDialogOpen = true;
+    unawaited(_openSeason1RankingDialog());
+    return true;
+  }
+
+  Future<void> _openSeason1RankingDialog() async {
+    try {
+      await _fetchExtendedRankings(forceRefresh: true);
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        useSafeArea: false,
+        builder: (_) => Season1RankingDialog(
+          userId: widget.userId,
+          swordRankings: _rankings,
+          battleRankings: _battleRankings,
+          towerRankings: _towerRankings,
+          codexRankings: _codexRankings,
+        ),
+      );
+    } finally {
+      _isRankingDialogOpen = false;
+    }
   }
 
   void _showTitleDialog() {
@@ -7559,7 +5599,7 @@ class _GameScreenState extends State<GameScreen>
         backgroundColor: const Color(0xFF2a2a4a),
         title: Row(
           children: [
-            const Text('🎖️ 칭호 관리', style: TextStyle(color: Colors.white)),
+            const Text('칭호 관리', style: TextStyle(color: Colors.white)),
             const Spacer(),
             Text(
               '${_unlockedTitles.length}/${allTitles.length}',
@@ -7591,7 +5631,7 @@ class _GameScreenState extends State<GameScreen>
                 ),
                 child: Row(
                   children: [
-                    // 칭호 정보
+                    // 移?샇 ?뺣낫
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -7615,7 +5655,7 @@ class _GameScreenState extends State<GameScreen>
                           ),
                           if (unlocked && title.bonus > 0)
                             Text(
-                              '보너스: 전투력 +${title.bonus}',
+                              '蹂대꼫?? ?꾪닾??+${title.bonus}',
                               style: const TextStyle(
                                 color: Colors.amber,
                                 fontSize: 11,
@@ -7625,15 +5665,15 @@ class _GameScreenState extends State<GameScreen>
                       ),
                     ),
 
-                    // 장착 버튼
+                    // ?μ갑 踰꾪듉
                     if (unlocked && !equipped)
                       ElevatedButton(
                         onPressed: () {
                           setState(() {
                             _equippedTitle = title.id;
                             _saveGameData();
-                            _syncMyProfile(); // 🔥 칭호 변경 시에만 프로필 동기화
-                            _updateRankings(); // 랭킹 표시 전투력 즉시 갱신
+                            _syncMyProfile(); // ?뵦 移?샇 蹂寃??쒖뿉留??꾨줈???숆린??
+                            _updateRankings(); // ??궧 ?쒖떆 ?꾪닾??利됱떆 媛깆떊
                           });
                           Navigator.pop(context);
                           _showNotification('칭호 장착: ${title.name}');
@@ -7642,7 +5682,7 @@ class _GameScreenState extends State<GameScreen>
                       )
                     else if (equipped)
                       const Text(
-                        '장착중',
+                        '\uC7A5\uCC29',
                         style: TextStyle(color: Colors.greenAccent),
                       )
                     else
@@ -7670,7 +5710,7 @@ class _GameScreenState extends State<GameScreen>
         backgroundColor: const Color(0xFF2a2a4a),
         title: Row(
           children: [
-            const Text('📚 검 도감', style: TextStyle(color: Colors.white)),
+            const Text('검 도감', style: TextStyle(color: Colors.white)),
             const Spacer(),
             Text(
               '${_codex.length}/${allSwords.length}',
@@ -7742,7 +5782,7 @@ class _GameScreenState extends State<GameScreen>
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 검 이미지
+                        // 寃 ?대?吏
                         SizedBox(
                           width: 48,
                           height: 48,
@@ -7750,6 +5790,7 @@ class _GameScreenState extends State<GameScreen>
                               ? SwordImageWidget(
                                   grade: sword.grade,
                                   element: sword.element,
+                                  swordId: sword.id,
                                   level: 0,
                                   size: 48,
                                   showPulse: false,
@@ -7761,19 +5802,19 @@ class _GameScreenState extends State<GameScreen>
                                   ),
                                   child: const Center(
                                     child: Text(
-                                      '❓',
+                                      '',
                                       style: TextStyle(fontSize: 24),
                                     ),
                                   ),
                                 ),
                         ),
                         const SizedBox(width: 10),
-                        // 검 정보
+                        // 寃 ?뺣낫
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 이름 + 속성
+                              // ?대쫫 + ?띿꽦
                               Row(
                                 children: [
                                   Flexible(
@@ -7800,16 +5841,16 @@ class _GameScreenState extends State<GameScreen>
                               ),
                               if (collected) ...[
                                 const SizedBox(height: 4),
-                                // 기본 스탯
+                                // 湲곕낯 ?ㅽ꺈
                                 Text(
-                                  '공격력: ${sword.baseAtk}',
+                                  '怨듦꺽?? ${sword.baseAtk}',
                                   style: const TextStyle(
                                     color: Colors.white70,
                                     fontSize: 11,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                // 스킬 정보
+                                // ?ㅽ궗 ?뺣낫
                                 ...sword.skills
                                     .take(2)
                                     .map(
@@ -7854,47 +5895,47 @@ class _GameScreenState extends State<GameScreen>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF2a2a4a),
-        title: const Text('📊 게임 통계', style: TextStyle(color: Colors.white)),
+        title: const Text('게임 통계', style: TextStyle(color: Colors.white)),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _statSection('⚔️ 강화', [
-                ('총 시도', _totalEnhanceAttempts),
-                ('성공', _totalEnhanceSuccess),
-                ('실패', _totalEnhanceFail),
-                ('파괴', _totalDestroy),
-                ('최대 연속 성공', _maxConsecutiveSuccess),
-                ('강화석 사용', _totalStoneUsed),
+              _statSection('강화', [
+                ('? ??', _totalEnhanceAttempts),
+                ('??', _totalEnhanceSuccess),
+                ('??', _totalEnhanceFail),
+                ('??', _totalDestroy),
+                ('?? ?? ??', _maxConsecutiveSuccess),
+                ('??? ??', _totalStoneUsed),
               ]),
               const SizedBox(height: 16),
-              _statSection('🎮 배틀', [
-                ('총 배틀', _totalBattle),
-                ('승리', _totalBattleWin),
-                ('패배', _totalBattle - _totalBattleWin), // 🔥 패배 횟수 추가
+              _statSection('배틀', [
+                ('? ??', _totalBattle),
+                ('??', _totalBattleWin),
+                ('??', _totalBattle - _totalBattleWin),
                 (
-                  '승률',
+                  '??',
                   _totalBattle > 0
                       ? '${(_totalBattleWin / _totalBattle * 100).toStringAsFixed(1)}%'
                       : '-',
                 ),
-                ('최대 연승', _maxWinStreak),
-                ('복수 성공', _totalRevengeWins),
+                ('?? ??', _maxWinStreak),
+                ('?? ??', _totalRevengeWins),
               ]),
               const SizedBox(height: 16),
-              _statSection('🐉 보스', [('처치 수', _bossKills)]),
+              _statSection('보스', [('처치', _bossKills)]),
               const SizedBox(height: 16),
-              _statSection('💰 경제', [
-                ('뽑기 횟수', _totalGacha),
-                ('합성 횟수', _totalSynthesis),
-                ('판매 횟수', _totalSell),
+              _statSection('경제', [
+                ('?? ??', _totalGacha),
+                ('?? ??', _totalSynthesis),
+                ('?? ??', _totalSell),
               ]),
               const SizedBox(height: 16),
-              _statSection('📅 기타', [
-                ('출석 연속', '$_attendanceStreak일'),
-                ('도감 수집', '${_codex.length}/${allSwords.length}'),
-                ('칭호 획득', '${_unlockedTitles.length}/${allTitles.length}'),
-                ('업적 달성', '${_unlockedAchievements.length}개'),
+              _statSection('기타', [
+                ('?? ??', '$_attendanceStreak?'),
+                ('?? ??', '${_codex.length}/${allSwords.length}'),
+                ('?? ??', '${_unlockedTitles.length}/${allTitles.length}'),
+                ('?? ??', '${_unlockedAchievements.length}?'),
               ]),
             ],
           ),
@@ -7910,7 +5951,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   // =====================================================
-  // ❓ 도움말 다이얼로그
+  // ???꾩?留??ㅼ씠?쇰줈洹?
   // =====================================================
   void _showHelpDialog() {
     showDialog(
@@ -7923,7 +5964,7 @@ class _GameScreenState extends State<GameScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 헤더
+              // ?ㅻ뜑
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -7939,10 +5980,10 @@ class _GameScreenState extends State<GameScreen>
                 ),
                 child: const Row(
                   children: [
-                    Text('❓', style: TextStyle(fontSize: 24)),
+                    Text('📘', style: TextStyle(fontSize: 24)),
                     SizedBox(width: 12),
                     Text(
-                      '게임 도움말',
+                      '게임 가이드',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -7953,17 +5994,17 @@ class _GameScreenState extends State<GameScreen>
                 ),
               ),
 
-              // 내용
+              // ?댁슜
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 속성 상성표
+                      // ?띿꽦 ?곸꽦??
                       _buildHelpSection(
-                        '⚔️ 속성 상성',
-                        '전투에서 속성 상성에 따라 데미지가 변합니다.',
+                        '속성 상성',
+                        '???? ?? ??? ?? ???? ????.',
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -7972,34 +6013,34 @@ class _GameScreenState extends State<GameScreen>
                           ),
                           child: Column(
                             children: [
-                              // 상성 도표
+                              // ?곸꽦 ?꾪몴
                               _buildElementRow(
-                                '🔥 불',
-                                '→',
-                                '🌿 자연',
-                                '유리 (+25%)',
+                                '?',
+                                '>',
+                                '??',
+                                '?? (+25%)',
                                 Colors.green,
                               ),
                               _buildElementRow(
-                                '💧 물',
-                                '→',
-                                '🔥 불',
-                                '유리 (+25%)',
+                                '?',
+                                '>',
+                                '\uBD88',
+                                '?? (+25%)',
                                 Colors.green,
                               ),
                               _buildElementRow(
-                                '🌿 자연',
-                                '→',
-                                '💧 물',
-                                '유리 (+25%)',
+                                '??',
+                                '>',
+                                '\uBB3C',
+                                '?? (+25%)',
                                 Colors.green,
                               ),
                               const Divider(color: Colors.white24, height: 16),
                               _buildElementRow(
-                                '✨ 빛',
-                                '↔',
-                                '🌑 암흑',
-                                '서로 상극',
+                                '?',
+                                '<>',
+                                '??',
+                                '?? ??',
                                 Colors.amber,
                               ),
                               const SizedBox(height: 8),
@@ -8010,7 +6051,7 @@ class _GameScreenState extends State<GameScreen>
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Text(
-                                  '💡 반대로 맞으면 -20% 데미지!',
+                                  '??? ??? -20% ??!',
                                   style: TextStyle(
                                     color: Colors.red,
                                     fontSize: 12,
@@ -8023,9 +6064,9 @@ class _GameScreenState extends State<GameScreen>
                       ),
                       const SizedBox(height: 20),
 
-                      // 등급 설명
+                      // ?깃툒 ?ㅻ챸
                       _buildHelpSection(
-                        '🗡️ 검 등급',
+                        '? ??',
                         '',
                         child: Wrap(
                           spacing: 8,
@@ -8073,15 +6114,15 @@ class _GameScreenState extends State<GameScreen>
                       ),
                       const SizedBox(height: 20),
 
-                      // 강화 팁
+                      // 媛뺥솕 ??
                       _buildHelpSection(
-                        '⚡ 강화 팁',
+                        '강화 가이드',
                         '',
                         child: const Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '• +1~+10: 파괴 없음, 실패 시 유지 (성공 92%→65%)',
+                              '+1~+10: ?? ??, ?? ? ?? (?? 92% -> 50%)',
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
@@ -8089,7 +6130,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• +11~+14: 파괴 시작 (파괴 2~8%)',
+                              '+11~+14: ?? ?? (?? 2~8%)',
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
@@ -8097,7 +6138,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• +15~+20: 파괴 30% 고정 (성공 30%→20%)',
+                              '+15~+20: ?? 30% ?? (?? 30% -> 0%)',
                               style: TextStyle(
                                 color: Colors.orange,
                                 fontSize: 12,
@@ -8105,7 +6146,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• +21~+25: 파괴 35% 고정 (성공 18%→8%)',
+                              '+21~+25: ?? 35% ?? (?? 18% -> 2%)',
                               style: TextStyle(
                                 color: Colors.deepOrange,
                                 fontSize: 12,
@@ -8113,12 +6154,12 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• +26~+30: 파괴 40% 고정 (성공 6%→1%)',
+                              '+26~+30: ?? 40% ?? (?? 6% -> 1%)',
                               style: TextStyle(color: Colors.red, fontSize: 12),
                             ),
                             SizedBox(height: 8),
                             Text(
-                              '• 강화석 (~+24): 성공률 +10%, 파괴율 -5%',
+                              '???(~+24): ??? +10%, ??? -5%',
                               style: TextStyle(
                                 color: Colors.amber,
                                 fontSize: 12,
@@ -8126,7 +6167,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• 강화석 (+25~+27): 성공률 +3%, 파괴율 -2%',
+                              '???(+25~+27): ??? +3%, ??? -2%',
                               style: TextStyle(
                                 color: Colors.amber,
                                 fontSize: 12,
@@ -8134,7 +6175,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• 강화석 (+28~+30): 성공률 +1%, 파괴율 -1%',
+                              '???(+28~+30): ??? +1%, ??? -1%',
                               style: TextStyle(
                                 color: Colors.amber,
                                 fontSize: 12,
@@ -8145,15 +6186,15 @@ class _GameScreenState extends State<GameScreen>
                       ),
                       const SizedBox(height: 20),
 
-                      // 돌파 팁
+                      // ?뚰뙆 ??
                       _buildHelpSection(
-                        '🧿 돌파 가이드',
+                        '돌파 가이드',
                         '',
                         child: const Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '• 30강에 도달하면 돌파가 열리고 최대 강화치가 +5 증가합니다.',
+                              '30?? ???? ??? ??? ?? ???? +5 ?????.',
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
@@ -8161,7 +6202,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• 돌파 재료: 동일 등급 20강 이상 검 1개 + 보스코어 + 골드',
+                              '?? ??: ?? ?? 20? ?? ? 1? + ???? + ??',
                               style: TextStyle(
                                 color: Color(0xFF80DEEA),
                                 fontSize: 12,
@@ -8169,7 +6210,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• 보스코어는 보스 처치 시 확률적으로 드랍되며, 높은 보스일수록 더 잘 나옵니다.',
+                              '????? ?? ?? ? ????? ????, ?? ????? ? ?? ????.',
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
@@ -8177,7 +6218,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 6),
                             Text(
-                              '• 31~35강: 성공 1.0% / 유지 89.0% / 파괴 10.0%',
+                              '+31~+35: ?? 1.0% / ?? 89.0% / ?? 10.0%',
                               style: TextStyle(
                                 color: Colors.amber,
                                 fontSize: 12,
@@ -8185,7 +6226,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• 36~40강: 성공 0.5% / 유지 89.5% / 파괴 10.0%',
+                              '+36~+40: ?? 0.5% / ?? 89.5% / ?? 10.0%',
                               style: TextStyle(
                                 color: Colors.orange,
                                 fontSize: 12,
@@ -8193,7 +6234,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• 41~45강: 성공 0.1% / 유지 89.9% / 파괴 10.0%',
+                              '+41~+45: ?? 0.1% / ?? 89.9% / ?? 10.0%',
                               style: TextStyle(
                                 color: Colors.redAccent,
                                 fontSize: 12,
@@ -8204,15 +6245,15 @@ class _GameScreenState extends State<GameScreen>
                       ),
                       const SizedBox(height: 20),
 
-                      // 합성 팁
+                      // ?⑹꽦 ??
                       _buildHelpSection(
-                        '🔄 합성 천장',
+                        '합성 천장',
                         '',
                         child: const Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '• 노말 10회 합성 → 레어 확정',
+                              '?? 10? ?? ? ?? ??',
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
@@ -8220,7 +6261,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• 레어 50회 합성 → 유니크 확정',
+                              '?? 50? ?? ? ??? ??',
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
@@ -8228,7 +6269,7 @@ class _GameScreenState extends State<GameScreen>
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '• 유니크 100회 합성 → 전설 확정',
+                              '??? 100? ?? ? ?? ??',
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
@@ -8242,7 +6283,7 @@ class _GameScreenState extends State<GameScreen>
                 ),
               ),
 
-              // 닫기 버튼
+              // ?リ린 踰꾪듉
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: TextButton(
@@ -8258,136 +6299,13 @@ class _GameScreenState extends State<GameScreen>
   }
 
   // =====================================================
-  // ⚙️ 설정 다이얼로그
+  // ?숋툘 ?ㅼ젙 ?ㅼ씠?쇰줈洹?
   // =====================================================
   void _showSettingsDialog() {
-    final soundService = SoundService();
-
     showDialog(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF2a2a4a),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Row(
-            children: [
-              Text('⚙️', style: TextStyle(fontSize: 24)),
-              SizedBox(width: 12),
-              Text('설정', style: TextStyle(color: Colors.white, fontSize: 18)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 🔊 배경음악 설정
-              _buildSettingRow(
-                icon: '🎵',
-                label: '배경음악',
-                value: soundService.bgmEnabled,
-                onChanged: (value) {
-                  soundService.setBgmEnabled(value);
-                  setDialogState(() {});
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // 🔊 효과음 설정
-              _buildSettingRow(
-                icon: '🔊',
-                label: '효과음',
-                value: soundService.sfxEnabled,
-                onChanged: (value) {
-                  soundService.setSfxEnabled(value);
-                  setDialogState(() {});
-                },
-              ),
-              const SizedBox(height: 20),
-
-              // 버전 정보
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('버전', style: TextStyle(color: Colors.white70)),
-                    Text('1.0.0', style: TextStyle(color: Colors.white54)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // 📄 개인정보처리방침
-              GestureDetector(
-                onTap: () async {
-                  final uri = Uri.parse(
-                    'https://sites.google.com/view/sword-game-privacy',
-                  );
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '📄 개인정보처리방침',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                      Icon(Icons.open_in_new, color: Colors.white54, size: 16),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('닫기'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingRow({
-    required String icon,
-    required String label,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 24)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          ),
-          Switch(value: value, onChanged: onChanged, activeColor: Colors.green),
-        ],
-      ),
+      useSafeArea: false,
+      builder: (_) => const Season1SettingsDialog(),
     );
   }
 
@@ -8499,526 +6417,5 @@ class _GameScreenState extends State<GameScreen>
 }
 
 // =====================================================
-// 🎰 종합 뽑기 다이얼로그 (일반 + 고급)
+// ?렟 醫낇빀 戮묎린 ?ㅼ씠?쇰줈洹?(?쇰컲 + 怨좉툒)
 // =====================================================
-class _GachaDialog extends StatefulWidget {
-  final int gold;
-  final int diamond;
-  final int inventoryCount;
-  final int maxInventory;
-  final Function(int) onNormalGacha;
-  final Function(int) onPremiumGacha;
-
-  const _GachaDialog({
-    required this.gold,
-    required this.diamond,
-    required this.inventoryCount,
-    required this.maxInventory,
-    required this.onNormalGacha,
-    required this.onPremiumGacha,
-  });
-
-  @override
-  State<_GachaDialog> createState() => _GachaDialogState();
-}
-
-class _GachaDialogState extends State<_GachaDialog>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    return Dialog(
-      backgroundColor: const Color(0xFF1a1a2e),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Container(
-        width: 340,
-        constraints: BoxConstraints(maxHeight: screenHeight * 0.75),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 헤더
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.purple.withOpacity(0.3),
-                    Colors.blue.withOpacity(0.3),
-                  ],
-                ),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    '🎰 검 뽑기',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  // 🔥 FittedBox로 감싸서 오버플로우 방지
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildCurrencyChip(
-                          '💰',
-                          formatNumber(widget.gold),
-                          Colors.amber,
-                        ),
-                        const SizedBox(width: 6),
-                        _buildCurrencyChip(
-                          '💎',
-                          '${widget.diamond}',
-                          Colors.cyan,
-                        ),
-                        const SizedBox(width: 6),
-                        _buildCurrencyChip(
-                          '📦',
-                          '${widget.inventoryCount}/${widget.maxInventory}',
-                          Colors.white70,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // 탭 바
-            Container(
-              color: Colors.black26,
-              child: TabBar(
-                controller: _tabController,
-                indicatorColor: Colors.amber,
-                labelColor: Colors.amber,
-                unselectedLabelColor: Colors.white54,
-                labelStyle: const TextStyle(fontSize: 13),
-                tabs: const [
-                  Tab(text: '🪙 일반 뽑기'),
-                  Tab(text: '💎 고급 뽑기'),
-                ],
-              ),
-            ),
-
-            // 탭 뷰
-            Flexible(
-              child: TabBarView(
-                controller: _tabController,
-                children: [_buildNormalGachaTab(), _buildPremiumGachaTab()],
-              ),
-            ),
-
-            // 닫기 버튼
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('닫기'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCurrencyChip(String icon, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 14)),
-          const SizedBox(width: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===== 일반 뽑기 탭 =====
-  Widget _buildNormalGachaTab() {
-    final inventoryFull = widget.inventoryCount >= widget.maxInventory;
-    final canGacha1 = widget.gold >= 500 && !inventoryFull;
-    final canGacha5 =
-        widget.gold >= 2250 && widget.inventoryCount + 5 <= widget.maxInventory;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ⚠️ 인벤토리 가득 참 경고
-          if (inventoryFull)
-            Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.5)),
-              ),
-              child: const Row(
-                children: [
-                  Text('⚠️', style: TextStyle(fontSize: 16)),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '인벤토리가 가득 찼습니다!\n검을 판매하거나 인벤토리를 확장하세요.',
-                      style: TextStyle(color: Colors.redAccent, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // 설명
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.amber.withOpacity(0.3)),
-            ),
-            child: const Row(
-              children: [
-                Text('🪙', style: TextStyle(fontSize: 18)),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '골드로 검을 뽑습니다\n모든 등급 획득 가능!',
-                    style: TextStyle(color: Colors.white70, fontSize: 11),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // 획득 가능 등급
-          const Text(
-            '획득 가능 등급',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: gachaProbability.keys
-                .map((grade) => _buildGradeChip(grade))
-                .toList(),
-          ),
-          const SizedBox(height: 16),
-
-          // 뽑기 버튼들
-          Row(
-            children: [
-              Expanded(
-                child: _buildGachaButton(
-                  '1회',
-                  '500G',
-                  Colors.amber,
-                  canGacha1,
-                  () => widget.onNormalGacha(1),
-                  requiredSlots: 1,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildGachaButton(
-                  '5회',
-                  '2,250G',
-                  Colors.purple,
-                  canGacha5,
-                  () => widget.onNormalGacha(5),
-                  subtitle: '10% 할인',
-                  requiredSlots: 5,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===== 고급 뽑기 탭 =====
-  Widget _buildPremiumGachaTab() {
-    final inventoryFull = widget.inventoryCount >= widget.maxInventory;
-    final canPremium1 =
-        widget.diamond >= premiumGachaCostSingle && !inventoryFull;
-    final canPremium5 =
-        widget.diamond >= premiumGachaCost5x &&
-        widget.inventoryCount + 5 <= widget.maxInventory;
-    final canPremium10 =
-        widget.diamond >= premiumGachaCost10x &&
-        widget.inventoryCount + 10 <= widget.maxInventory;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ⚠️ 인벤토리 가득 참 경고
-          if (inventoryFull)
-            Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.5)),
-              ),
-              child: const Row(
-                children: [
-                  Text('⚠️', style: TextStyle(fontSize: 16)),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '인벤토리가 가득 찼습니다!\n검을 판매하거나 인벤토리를 확장하세요.',
-                      style: TextStyle(color: Colors.redAccent, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // 설명 (프리미엄 강조)
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.purple.withOpacity(0.2),
-                  Colors.cyan.withOpacity(0.2),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.cyan.withOpacity(0.5)),
-            ),
-            child: const Row(
-              children: [
-                Text('💎', style: TextStyle(fontSize: 18)),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '다이아몬드로 고급 검을 뽑습니다\n⭐ 최소 레어 등급 보장!',
-                    style: TextStyle(color: Colors.white, fontSize: 11),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // 획득 가능 등급 (노말 제외) - 확률 표시 없음
-          const Text(
-            '획득 가능 등급',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: premiumGachaProbability.keys
-                .map((grade) => _buildGradeChip(grade))
-                .toList(),
-          ),
-          const SizedBox(height: 16),
-
-          // 뽑기 버튼들
-          _buildGachaButton(
-            '1회',
-            '$premiumGachaCostSingle💎',
-            Colors.cyan,
-            canPremium1,
-            () => widget.onPremiumGacha(1),
-            requiredSlots: 1,
-          ),
-          const SizedBox(height: 8),
-          _buildGachaButton(
-            '5회',
-            '$premiumGachaCost5x💎',
-            Colors.purple,
-            canPremium5,
-            () => widget.onPremiumGacha(5),
-            subtitle: '1회당 ${premiumGachaCost5x ~/ 5}💎',
-            requiredSlots: 5,
-          ),
-          const SizedBox(height: 8),
-          _buildGachaButton(
-            '10회',
-            '$premiumGachaCost10x💎',
-            Colors.amber,
-            canPremium10,
-            () => widget.onPremiumGacha(10),
-            subtitle: '✨ 유니크 이상 1개 확정!',
-            isSpecial: true,
-            requiredSlots: 10,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGradeChip(SwordGrade grade) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: BoxDecoration(
-        color: grade.color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: grade.color.withOpacity(0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 18,
-            height: 18,
-            child: SwordImageWidget(
-              grade: grade,
-              element: GameElement.fire,
-              level: 0,
-              size: 18,
-              showPulse: false,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            grade.displayName,
-            style: TextStyle(
-              color: grade.color,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGachaButton(
-    String title,
-    String cost,
-    Color color,
-    bool enabled,
-    VoidCallback onPressed, {
-    String? subtitle,
-    bool isSpecial = false,
-    int? requiredSlots,
-  }) {
-    // 인벤토리 부족 여부 판단
-    final slotsAvailable = widget.maxInventory - widget.inventoryCount;
-    final isInventoryBlock =
-        requiredSlots != null && slotsAvailable < requiredSlots;
-
-    return Container(
-      decoration: isSpecial && enabled
-          ? BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.4),
-                  blurRadius: 12,
-                  spreadRadius: 1,
-                ),
-              ],
-            )
-          : null,
-      child: ElevatedButton(
-        onPressed: enabled ? onPressed : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: enabled ? color : Colors.grey[800],
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: isInventoryBlock
-              ? Colors.red.withOpacity(0.15)
-              : Colors.grey[800],
-          disabledForegroundColor: isInventoryBlock
-              ? Colors.redAccent.withOpacity(0.7)
-              : Colors.white38,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: !enabled && isInventoryBlock
-                ? BorderSide(color: Colors.red.withOpacity(0.4))
-                : BorderSide.none,
-          ),
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(cost, style: const TextStyle(fontSize: 14)),
-              ],
-            ),
-            if (!enabled && isInventoryBlock)
-              Text(
-                '📦 빈 칸 ${requiredSlots}개 필요 (현재 $slotsAvailable칸)',
-                style: const TextStyle(fontSize: 10, color: Colors.redAccent),
-              )
-            else if (subtitle != null)
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isSpecial ? Colors.yellow : Colors.white70,
-                  fontWeight: isSpecial ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}

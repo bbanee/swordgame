@@ -14,6 +14,8 @@ class PlayerProfile {
   final DateTime updatedAt;
   final int totalBattle;
   final int totalBattleWin;
+  final int codexCount;
+  final String platform; // 'google' = Flutter/구글, 'toss' = 앱인토스
 
   const PlayerProfile({
     required this.userId,
@@ -25,12 +27,11 @@ class PlayerProfile {
     required this.updatedAt,
     this.totalBattle = 0,
     this.totalBattleWin = 0,
+    this.codexCount = 0,
+    this.platform = 'google',
   });
 
-  SwordData get sword => allSwords.firstWhere(
-    (s) => s.id == swordId,
-    orElse: () => allSwords.first,
-  );
+  SwordData get sword => getSwordById(swordId);
 
   // ✅ 등급별 레벨 보너스 (battle_engine.dart gradeLevelBonus와 동일!)
   static const Map<SwordGrade, int> _gradeLevelBonus = {
@@ -57,6 +58,7 @@ class PlayerProfile {
     'updatedAt': updatedAt.toIso8601String(),
     'totalBattle': totalBattle,
     'totalBattleWin': totalBattleWin,
+    'codexCount': codexCount,
   };
 
   factory PlayerProfile.fromJson(Map<String, dynamic> json) {
@@ -72,6 +74,7 @@ class PlayerProfile {
           : DateTime.now(),
       totalBattle: (json['totalBattle'] ?? 0) as int,
       totalBattleWin: (json['totalBattleWin'] ?? 0) as int,
+      codexCount: (json['codexCount'] ?? 0) as int,
     );
   }
 }

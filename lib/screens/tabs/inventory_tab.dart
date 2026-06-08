@@ -1,13 +1,20 @@
-// lib/screens/tabs/inventory_tab.dart
-// 인벤토리 탭 UI - GameScreen에서 분리
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
 import '../../enums/sword_grade.dart';
 import '../../models/owned_sword.dart';
 import '../../utils/helpers.dart';
 import '../../widgets/sword_image_widget.dart';
 
 class InventoryTab extends StatefulWidget {
+  static const _baseAsset =
+      'assets/images/home/season1_inventory_scene_body_v2.png';
+  static const _itemFrameAsset =
+      'assets/images/home/season1_inventory_item_frame_v1.png';
+  static const _baseWidth = 941.0;
+  static const _baseHeight = 1671.0;
+
   final List<OwnedSword> inventory;
   final int maxInventory;
   final OwnedSword? equippedSword;
@@ -37,6 +44,214 @@ class _InventoryTabState extends State<InventoryTab> {
   bool _isBulkMode = false;
   final Set<String> _selectedUids = {};
 
+  List<OwnedSword> get _selectedSwords =>
+      widget.inventory.where((s) => _selectedUids.contains(s.uid)).toList();
+
+  int get _selectedTotalPrice =>
+      _selectedSwords.fold(0, (sum, sword) => sum + sword.sellPrice);
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = _InventoryLayout(
+          constraints.maxWidth,
+          constraints.maxHeight,
+        );
+
+        return ClipRect(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Image.asset(
+                  InventoryTab._baseAsset,
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+              ..._buildDataOverlays(layout),
+              ..._buildTapOverlays(layout),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildDataOverlays(_InventoryLayout layout) {
+    final isFull = widget.inventory.length >= widget.maxInventory;
+    return [
+      _box(
+        layout,
+        _InventoryRects.count,
+        _fitText(
+          layout,
+          '${widget.inventory.length} / ${widget.maxInventory}',
+          28,
+          color: isFull ? Colors.redAccent : Colors.white,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      if (_isBulkMode)
+        _box(
+          layout,
+          _InventoryRects.bulkSummary,
+          _fitText(
+            layout,
+            '선택 ${_selectedSwords.length}개  ${formatGold(_selectedTotalPrice)}G',
+            24,
+            color: Colors.amber,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      _box(layout, _InventoryRects.grid, _buildGrid(layout)),
+    ];
+  }
+
+  List<Widget> _buildTapOverlays(_InventoryLayout layout) {
+    return [
+      _tap(layout, _InventoryRects.expandButton, widget.onExpandInventory),
+      _tap(layout, _InventoryRects.bulkButton, _toggleBulkMode),
+      _tap(layout, _InventoryRects.allFilter, () => _selectAll()),
+      for (var i = 0; i < SwordGrade.values.length; i++)
+        _tap(
+          layout,
+          _InventoryRects.gradeFilters[i],
+          () => _selectByGrade(SwordGrade.values[i]),
+        ),
+      if (_isBulkMode && _selectedSwords.isNotEmpty)
+        _tap(layout, _InventoryRects.sellButton, _confirmBulkSell),
+    ];
+  }
+
+  Widget _buildGrid(_InventoryLayout layout) {
+    return GridView.builder(
+      padding: EdgeInsets.fromLTRB(
+        layout.u(34),
+        layout.u(22),
+        layout.u(34),
+        layout.u(28),
+      ),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: layout.u(26),
+        mainAxisSpacing: layout.u(20),
+        mainAxisExtent: layout.u(254),
+      ),
+      itemCount: widget.inventory.length,
+      itemBuilder: (_, i) => _inventoryItem(layout, widget.inventory[i]),
+    );
+  }
+
+  Widget _inventoryItem(_InventoryLayout layout, OwnedSword sword) {
+    final isEquipped = widget.equippedSword?.uid == sword.uid;
+    final isSelected = _selectedUids.contains(sword.uid);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: _isBulkMode
+          ? () => _toggleSelect(sword)
+          : () => widget.onSwordTap(sword),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final cellWidth = constraints.maxWidth;
+          final cellHeight = constraints.maxHeight;
+          final nameHeight = layout.u(46);
+          final nameBottom = 0.0;
+          final swordTop = layout.u(18);
+          final swordBottom = nameBottom + nameHeight + layout.u(8);
+          final swordAreaHeight = cellHeight - swordTop - swordBottom;
+          final swordSize = math.min(cellWidth * 0.64, swordAreaHeight * 0.96);
+
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: Image.asset(
+                  InventoryTab._itemFrameAsset,
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: swordTop,
+                height: swordAreaHeight,
+                child: Center(
+                  child: SizedBox(
+                    width: swordSize,
+                    height: swordSize,
+                    child: Center(
+                      child: SwordImageWidget(
+                        grade: sword.data.grade,
+                        element: sword.data.element,
+                        swordId: sword.data.id,
+                        level: sword.level,
+                        breakthroughLevel: sword.breakthroughLevel,
+                        size: swordSize,
+                        showPulse: false,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (isEquipped)
+                Positioned(
+                  top: layout.u(11),
+                  right: layout.u(12),
+                  child: _badge('장착', Colors.amber),
+                ),
+              if (_isBulkMode && !isEquipped)
+                Positioned(
+                  top: layout.u(10),
+                  right: layout.u(12),
+                  child: Icon(
+                    isSelected
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: isSelected ? Colors.orange : Colors.white54,
+                    size: layout.u(28),
+                  ),
+                ),
+              Positioned(
+                left: layout.u(16),
+                right: layout.u(16),
+                bottom: nameBottom,
+                height: nameHeight,
+                child: _fitText(
+                  layout,
+                  sword.data.name,
+                  19,
+                  color: sword.data.grade.color,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _badge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.black87,
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   void _toggleBulkMode() {
     setState(() {
       _isBulkMode = !_isBulkMode;
@@ -45,7 +260,6 @@ class _InventoryTabState extends State<InventoryTab> {
   }
 
   void _toggleSelect(OwnedSword sword) {
-    // 장착중인 검은 선택 불가
     if (widget.equippedSword?.uid == sword.uid) return;
     setState(() {
       if (_selectedUids.contains(sword.uid)) {
@@ -62,508 +276,144 @@ class _InventoryTabState extends State<InventoryTab> {
           .where(
             (s) => s.data.grade == grade && s.uid != widget.equippedSword?.uid,
           )
-          .map((s) => s.uid);
-
-      // 이미 전부 선택되어 있으면 해제, 아니면 전부 선택
-      final allSelected = targets.every((uid) => _selectedUids.contains(uid));
-      if (allSelected && targets.isNotEmpty) {
+          .map((s) => s.uid)
+          .toSet();
+      final allSelected =
+          targets.isNotEmpty && targets.every(_selectedUids.contains);
+      if (allSelected) {
         _selectedUids.removeAll(targets);
       } else {
         _selectedUids.addAll(targets);
       }
+      _isBulkMode = true;
     });
   }
 
   void _selectAll() {
     setState(() {
-      final allNonEquipped = widget.inventory
+      final targets = widget.inventory
           .where((s) => s.uid != widget.equippedSword?.uid)
           .map((s) => s.uid)
           .toSet();
-
-      if (_selectedUids.length == allNonEquipped.length) {
+      final allSelected =
+          targets.isNotEmpty && targets.every(_selectedUids.contains);
+      if (allSelected) {
         _selectedUids.clear();
       } else {
-        _selectedUids.addAll(allNonEquipped);
+        _selectedUids.addAll(targets);
       }
+      _isBulkMode = true;
     });
   }
 
-  List<OwnedSword> get _selectedSwords =>
-      widget.inventory.where((s) => _selectedUids.contains(s.uid)).toList();
-
-  int get _selectedTotalPrice =>
-      _selectedSwords.fold(0, (sum, s) => sum + s.sellPrice);
-
   void _confirmBulkSell() {
     if (_selectedSwords.isEmpty) return;
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF2a2a4a),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('일괄 판매', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${_selectedSwords.length}개의 검을 판매합니다.',
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-            // 등급별 개수 요약
-            ..._buildGradeSummary(),
-            const Divider(color: Colors.white24),
-            Row(
-              children: [
-                const Text(
-                  '예상 수익: ',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-                Text(
-                  '${formatNumber(_selectedTotalPrice)}G',
-                  style: const TextStyle(
-                    color: Colors.amber,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              '※ 판매 이벤트 배율은 개별 적용됩니다',
-              style: TextStyle(color: Colors.white38, fontSize: 11),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              widget.onBulkSell(_selectedSwords);
-              setState(() {
-                _isBulkMode = false;
-                _selectedUids.clear();
-              });
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: Text(
-              '${_selectedSwords.length}개 판매',
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
+    widget.onBulkSell(_selectedSwords);
+    setState(() {
+      _isBulkMode = false;
+      _selectedUids.clear();
+    });
   }
 
-  List<Widget> _buildGradeSummary() {
-    final gradeCount = <SwordGrade, int>{};
-    for (final s in _selectedSwords) {
-      gradeCount[s.data.grade] = (gradeCount[s.data.grade] ?? 0) + 1;
-    }
-    return gradeCount.entries
-        .map(
-          (e) => Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Text(
-              '  ${e.key.emoji} ${e.key.displayName} × ${e.value}',
-              style: TextStyle(color: e.key.color, fontSize: 13),
-            ),
-          ),
-        )
-        .toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final itemCount = widget.inventory.length;
-    final isFull = itemCount >= widget.maxInventory;
-
-    return Column(
-      children: [
-        // 상단 바: 인벤토리 용량 + 확장 + 일괄판매
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
-            border: Border(
-              bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.inventory_2,
-                color: isFull ? Colors.red : Colors.white70,
-                size: 20,
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: isFull
-                      ? Colors.red.withOpacity(0.2)
-                      : Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isFull ? Colors.red : Colors.white.withOpacity(0.2),
-                  ),
-                ),
-                child: Text(
-                  '$itemCount / ${widget.maxInventory}',
-                  style: TextStyle(
-                    color: isFull ? Colors.red : Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              // 인벤토리 확장 버튼
-              _buildHeaderButton(
-                icon: Icons.add_circle_outline,
-                label: '확장',
-                color: Colors.green,
-                onTap: widget.onExpandInventory,
-              ),
-              const Spacer(),
-              // 일괄판매 토글 버튼
-              _buildHeaderButton(
-                icon: _isBulkMode ? Icons.close : Icons.sell,
-                label: _isBulkMode ? '취소' : '일괄판매',
-                color: _isBulkMode ? Colors.grey : Colors.orange,
-                onTap: _toggleBulkMode,
-              ),
-            ],
-          ),
-        ),
-
-        // 일괄판매 모드: 등급별 빠른 선택 바
-        if (_isBulkMode)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            color: Colors.orange.withOpacity(0.08),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildGradeFilterChip('전체', null),
-                  ...SwordGrade.values.map((g) {
-                    final count = widget.inventory
-                        .where(
-                          (s) =>
-                              s.data.grade == g &&
-                              s.uid != widget.equippedSword?.uid,
-                        )
-                        .length;
-                    if (count == 0) return const SizedBox.shrink();
-                    return _buildGradeFilterChip(
-                      '${g.emoji}${g.displayName}($count)',
-                      g,
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-
-        // 그리드 목록
-        Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 0.85,
-            ),
-            itemCount: widget.inventory.length,
-            itemBuilder: (_, i) {
-              final sword = widget.inventory[i];
-              final isEquipped = widget.equippedSword?.uid == sword.uid;
-              final isSelected = _selectedUids.contains(sword.uid);
-
-              return GestureDetector(
-                onTap: _isBulkMode
-                    ? () => _toggleSelect(sword)
-                    : () => widget.onSwordTap(sword),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: sword.data.grade.color.withOpacity(
-                      _isBulkMode && isSelected ? 0.35 : 0.2,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _isBulkMode && isSelected
-                          ? Colors.orange
-                          : isEquipped
-                          ? Colors.amber
-                          : sword.data.grade.color.withOpacity(0.5),
-                      width: (_isBulkMode && isSelected) || isEquipped ? 2 : 1,
-                    ),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // 일괄판매 모드에서 장착중 검은 어둡게
-                      if (_isBulkMode && isEquipped)
-                        Positioned.fill(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(11),
-                            ),
-                          ),
-                        ),
-                      SwordImageWidget(
-                        grade: sword.data.grade,
-                        element: sword.data.element,
-                        level: sword.level,
-                        breakthroughLevel: sword.breakthroughLevel,
-                        size: 60,
-                        showPulse: false,
-                      ),
-                      // 장착 체크
-                      if (isEquipped && !_isBulkMode)
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Colors.amber,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              size: 10,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      // 장착중 표시 (일괄판매 모드)
-                      if (_isBulkMode && isEquipped)
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black87,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              '장착중',
-                              style: TextStyle(
-                                color: Colors.amber,
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      // 선택 체크박스
-                      if (_isBulkMode && !isEquipped)
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Colors.orange
-                                  : Colors.transparent,
-                              border: Border.all(
-                                color: isSelected
-                                    ? Colors.orange
-                                    : Colors.white38,
-                                width: 1.5,
-                              ),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: isSelected
-                                ? const Icon(
-                                    Icons.check,
-                                    size: 14,
-                                    color: Colors.white,
-                                  )
-                                : null,
-                          ),
-                        ),
-                      Positioned(
-                        bottom: 4,
-                        child: Text(
-                          sword.data.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        // 일괄판매 모드: 하단 확인 바
-        if (_isBulkMode)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1a1a2e),
-              border: Border(
-                top: BorderSide(color: Colors.white.withOpacity(0.1)),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '선택: ${_selectedSwords.length}개',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        '💰 ${formatNumber(_selectedTotalPrice)}G',
-                        style: const TextStyle(
-                          color: Colors.amber,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _selectedSwords.isNotEmpty
-                      ? _confirmBulkSell
-                      : null,
-                  icon: const Icon(Icons.sell, size: 16),
-                  label: Text('${_selectedSwords.length}개 판매'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    disabledBackgroundColor: Colors.grey.shade800,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildHeaderButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
+  Widget _fitText(
+    _InventoryLayout layout,
+    String text,
+    double baseSize, {
+    Color color = Colors.white,
+    FontWeight fontWeight = FontWeight.w700,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.4)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGradeFilterChip(String label, SwordGrade? grade) {
-    // 해당 등급이 전부 선택되어 있는지 확인
-    bool isActive;
-    if (grade == null) {
-      // 전체
-      final allNonEquipped = widget.inventory
-          .where((s) => s.uid != widget.equippedSword?.uid)
-          .map((s) => s.uid)
-          .toSet();
-      isActive =
-          allNonEquipped.isNotEmpty &&
-          allNonEquipped.every((uid) => _selectedUids.contains(uid));
-    } else {
-      final targets = widget.inventory
-          .where(
-            (s) => s.data.grade == grade && s.uid != widget.equippedSword?.uid,
-          )
-          .map((s) => s.uid)
-          .toSet();
-      isActive =
-          targets.isNotEmpty &&
-          targets.every((uid) => _selectedUids.contains(uid));
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: GestureDetector(
-        onTap: () => grade == null ? _selectAll() : _selectByGrade(grade),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: isActive
-                ? Colors.orange.withOpacity(0.3)
-                : Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isActive ? Colors.orange : Colors.white.withOpacity(0.15),
-            ),
-          ),
+    final fontSize = layout.u(baseSize);
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: layout.u(4)),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
           child: Text(
-            label,
+            text,
+            maxLines: 1,
+            softWrap: false,
+            textAlign: TextAlign.center,
+            textHeightBehavior: const TextHeightBehavior(
+              applyHeightToFirstAscent: false,
+              applyHeightToLastDescent: false,
+            ),
+            strutStyle: StrutStyle(
+              fontSize: fontSize,
+              height: 1,
+              forceStrutHeight: true,
+            ),
             style: TextStyle(
-              color: isActive ? Colors.orange : Colors.white70,
-              fontSize: 11,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              color: color,
+              fontSize: fontSize,
+              fontWeight: fontWeight,
+              height: 1,
+              shadows: const [
+                Shadow(
+                  color: Colors.black,
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
   }
+
+  Widget _box(_InventoryLayout layout, Rect rect, Widget child) {
+    return Positioned.fromRect(rect: layout.r(rect), child: child);
+  }
+
+  Widget _tap(_InventoryLayout layout, Rect rect, VoidCallback onTap) {
+    return _box(
+      layout,
+      rect,
+      GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: onTap,
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+class _InventoryLayout {
+  final double width;
+  final double height;
+  late final double sx = width / InventoryTab._baseWidth;
+  late final double sy = height / InventoryTab._baseHeight;
+  late final double s = math.min(sx, sy);
+
+  _InventoryLayout(this.width, this.height);
+
+  double u(double value) => value * s;
+
+  Rect r(Rect rect) => Rect.fromLTWH(
+    rect.left * sx,
+    rect.top * sy,
+    rect.width * sx,
+    rect.height * sy,
+  );
+}
+
+class _InventoryRects {
+  static const count = Rect.fromLTWH(55, 371, 407, 76);
+  static const expandButton = Rect.fromLTWH(496, 391, 166, 66);
+  static const bulkButton = Rect.fromLTWH(684, 391, 222, 66);
+  static const bulkSummary = Rect.fromLTWH(245, 1561, 465, 58);
+  static const sellButton = Rect.fromLTWH(183, 1540, 570, 90);
+
+  static const allFilter = Rect.fromLTWH(38, 476, 126, 64);
+  static const gradeFilters = [
+    Rect.fromLTWH(176, 476, 126, 64),
+    Rect.fromLTWH(314, 476, 126, 64),
+    Rect.fromLTWH(453, 476, 126, 64),
+    Rect.fromLTWH(591, 476, 126, 64),
+    Rect.fromLTWH(729, 476, 126, 64),
+    Rect.fromLTWH(856, 476, 70, 64),
+  ];
+
+  static const grid = Rect.fromLTWH(31, 548, 907, 968);
 }

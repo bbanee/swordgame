@@ -30,7 +30,10 @@ class _AchievementsScreenState extends State<AchievementsScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: AchievementCategory.values.length, vsync: this);
+    _tab = TabController(
+      length: AchievementCategory.values.length,
+      vsync: this,
+    );
   }
 
   @override
@@ -40,19 +43,22 @@ class _AchievementsScreenState extends State<AchievementsScreen>
   }
 
   int _stat(String key) => widget.stats[key] ?? 0;
-  
+
   // ✅ 수령 가능한 업적 목록
   List<AchievementData> get _claimableAchievements {
-    return _all.where((a) => 
-      widget.unlocked.contains(a.id) && !widget.claimed.contains(a.id)
-    ).toList();
+    return _all
+        .where(
+          (a) =>
+              widget.unlocked.contains(a.id) && !widget.claimed.contains(a.id),
+        )
+        .toList();
   }
-  
+
   // ✅ 모두 수령
   void _claimAll() {
     final claimable = _claimableAchievements;
     if (claimable.isEmpty) return;
-    
+
     for (final ach in claimable) {
       widget.onClaim(ach);
     }
@@ -62,7 +68,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
   @override
   Widget build(BuildContext context) {
     final claimableCount = _claimableAchievements.length;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('업적'),
@@ -76,7 +82,10 @@ class _AchievementsScreenState extends State<AchievementsScreen>
                 icon: const Icon(Icons.done_all, color: Colors.amber),
                 label: Text(
                   '모두 수령 ($claimableCount)',
-                  style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.amber.withOpacity(0.15),
@@ -147,8 +156,10 @@ class _AchievementsScreenState extends State<AchievementsScreen>
               Row(
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: a.categoryColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(999),
@@ -215,9 +226,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
                           widget.onClaim(a);
                           setState(() {});
                         },
-                  child: Text(
-                    claimed ? '수령 완료' : (unlocked ? '보상 수령' : '미달성'),
-                  ),
+                  child: Text(claimed ? '수령 완료' : (unlocked ? '보상 수령' : '미달성')),
                 ),
               ),
             ],
@@ -230,7 +239,8 @@ class _AchievementsScreenState extends State<AchievementsScreen>
   Widget _rewardChips(AchievementData a) {
     final chips = <Widget>[];
     if (a.rewardGold > 0) chips.add(_chip('🪙', formatNumber(a.rewardGold)));
-    if (a.rewardDiamond > 0) chips.add(_chip('💎', formatNumber(a.rewardDiamond)));
+    if (a.rewardDiamond > 0)
+      chips.add(_chip('💎', formatNumber(a.rewardDiamond)));
     if (a.rewardStone > 0) chips.add(_chip('🔮', formatNumber(a.rewardStone)));
     return Wrap(spacing: 6, children: chips);
   }

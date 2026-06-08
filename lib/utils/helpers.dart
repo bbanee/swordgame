@@ -256,7 +256,7 @@ int calculateDamage(int baseDamage, {double multiplier = 1.0}) {
 
 // ===== 합성 로직 =====
 bool canSynthesize(SwordGrade grade) {
-  return grade != SwordGrade.immortal && grade != SwordGrade.hidden;
+  return synthesisTable.any((rule) => rule.$1 == grade);
 }
 
 ({SwordGrade to, double prob, int? ceiling})? _findSynthesisRule(

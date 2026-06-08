@@ -21,7 +21,8 @@ class OpponentEntry {
   final int swordLevel;
   final int swordBreakthroughLevel;
   final bool isNpc;
-  final bool isFriend; // 친구 여부 표시
+  final bool isFriend;
+  final String platform; // 'google' or 'toss'
 
   const OpponentEntry({
     required this.id,
@@ -31,6 +32,7 @@ class OpponentEntry {
     this.swordBreakthroughLevel = 0,
     required this.isNpc,
     this.isFriend = false,
+    this.platform = 'google',
   });
 
   int get power => sword.baseAtk + swordLevel * 10;
@@ -244,6 +246,7 @@ class _BattleSelectScreenState extends State<BattleSelectScreen>
       swordBreakthroughLevel: p.swordBreakthroughLevel,
       isNpc: false,
       isFriend: isFriend,
+      platform: p.platform,
     );
   }
 
@@ -569,6 +572,7 @@ class _BattleSelectScreenState extends State<BattleSelectScreen>
             SwordImageWidget(
               grade: o.sword.grade,
               element: o.sword.element,
+              swordId: o.sword.id,
               level: o.swordLevel,
               breakthroughLevel: o.swordBreakthroughLevel,
               size: 38, // ✅ 50 → 38로 줄임
@@ -609,6 +613,33 @@ class _BattleSelectScreenState extends State<BattleSelectScreen>
                             style: TextStyle(
                               color: Colors.orange,
                               fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (!o.isNpc) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                (o.platform == 'toss'
+                                        ? Colors.blue
+                                        : Colors.green)
+                                    .withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            o.platform == 'toss' ? '토스' : '구글',
+                            style: TextStyle(
+                              color: o.platform == 'toss'
+                                  ? Colors.blueAccent
+                                  : Colors.greenAccent,
+                              fontSize: 9,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

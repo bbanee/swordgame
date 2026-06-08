@@ -11,8 +11,8 @@ class SeasonPassScreen extends StatefulWidget {
   final bool hasPremiumPass;
   final Set<int> claimedPremiumRewards;
   final int diamond;
-  final int todaySeasonExp;  // ✅ 추가: 오늘 획득한 EXP
-  final int maxDailySeasonExp;  // ✅ 추가: 하루 상한
+  final int todaySeasonExp; // ✅ 추가: 오늘 획득한 EXP
+  final int maxDailySeasonExp; // ✅ 추가: 하루 상한
   final void Function(int level) onClaimFreeReward;
   final void Function(int level) onClaimPremiumReward;
   final VoidCallback onBuyPremiumPass;
@@ -27,8 +27,8 @@ class SeasonPassScreen extends StatefulWidget {
     required this.hasPremiumPass,
     required this.claimedPremiumRewards,
     required this.diamond,
-    this.todaySeasonExp = 0,  // ✅ 기본값
-    this.maxDailySeasonExp = 300,  // ✅ 기본값
+    this.todaySeasonExp = 0, // ✅ 기본값
+    this.maxDailySeasonExp = 300, // ✅ 기본값
     required this.onClaimFreeReward,
     required this.onClaimPremiumReward,
     required this.onBuyPremiumPass,
@@ -51,25 +51,32 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
     _localClaimedPremium = Set.from(widget.claimedPremiumRewards);
     _localHasPremium = widget.hasPremiumPass;
   }
-  
+
   // ✅ 수령 가능한 일반 보상 수
   int get _claimableFreeCount {
-    return rewards.where((r) => 
-      widget.level >= r.level && !_localClaimedFree.contains(r.level)
-    ).length;
+    return rewards
+        .where(
+          (r) =>
+              widget.level >= r.level && !_localClaimedFree.contains(r.level),
+        )
+        .length;
   }
-  
+
   // ✅ 수령 가능한 프리미엄 보상 수
   int get _claimablePremiumCount {
     if (!_localHasPremium) return 0;
-    return rewards.where((r) => 
-      widget.level >= r.level && !_localClaimedPremium.contains(r.level)
-    ).length;
+    return rewards
+        .where(
+          (r) =>
+              widget.level >= r.level &&
+              !_localClaimedPremium.contains(r.level),
+        )
+        .length;
   }
-  
+
   // ✅ 전체 수령 가능 수
   int get _totalClaimableCount => _claimableFreeCount + _claimablePremiumCount;
-  
+
   // ✅ 모두 수령
   void _claimAll() {
     // 일반 보상 수령
@@ -79,17 +86,18 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
         _localClaimedFree.add(r.level);
       }
     }
-    
+
     // 프리미엄 보상 수령
     if (_localHasPremium) {
       for (final r in rewards) {
-        if (widget.level >= r.level && !_localClaimedPremium.contains(r.level)) {
+        if (widget.level >= r.level &&
+            !_localClaimedPremium.contains(r.level)) {
           widget.onClaimPremiumReward(r.level);
           _localClaimedPremium.add(r.level);
         }
       }
     }
-    
+
     setState(() {});
   }
 
@@ -112,7 +120,11 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
                 icon: const Icon(Icons.done_all, color: Colors.amber, size: 18),
                 label: Text(
                   '모두 수령 ($_totalClaimableCount)',
-                  style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12),
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.amber.withOpacity(0.15),
@@ -123,9 +135,15 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
           if (!_localHasPremium)
             TextButton.icon(
               onPressed: _showBuyPremiumDialog,
-              icon: const Icon(Icons.workspace_premium, color: Colors.amber, size: 18),
-              label: const Text('₩11,000',
-                  style: TextStyle(color: Colors.amber, fontSize: 12)),
+              icon: const Icon(
+                Icons.workspace_premium,
+                color: Colors.amber,
+                size: 18,
+              ),
+              label: const Text(
+                '₩11,000',
+                style: TextStyle(color: Colors.amber, fontSize: 12),
+              ),
             ),
         ],
       ),
@@ -149,7 +167,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
 
   Widget _header(double progress) {
     final bool isMaxed = widget.todaySeasonExp >= widget.maxDailySeasonExp;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -158,24 +176,40 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
             children: [
               const Icon(Icons.confirmation_num, color: Colors.amber),
               const SizedBox(width: 8),
-              Text('Lv.${widget.level}', 
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(
+                'Lv.${widget.level}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               if (_localHasPremium) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.amber.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.amber),
                   ),
-                  child: const Text('👑 PREMIUM', 
-                      style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    '👑 PREMIUM',
+                    style: TextStyle(
+                      color: Colors.amber,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
               const Spacer(),
-              Text('EXP ${formatNumber(widget.exp)}', 
-                  style: const TextStyle(color: Colors.white70)),
+              Text(
+                'EXP ${formatNumber(widget.exp)}',
+                style: const TextStyle(color: Colors.white70),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -192,10 +226,14 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: isMaxed ? Colors.orange.withOpacity(0.2) : Colors.blue.withOpacity(0.1),
+              color: isMaxed
+                  ? Colors.orange.withOpacity(0.2)
+                  : Colors.blue.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isMaxed ? Colors.orange.withOpacity(0.5) : Colors.blue.withOpacity(0.3),
+                color: isMaxed
+                    ? Colors.orange.withOpacity(0.5)
+                    : Colors.blue.withOpacity(0.3),
               ),
             ),
             child: Row(
@@ -208,7 +246,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  isMaxed 
+                  isMaxed
                       ? '오늘 EXP 상한 도달! (${widget.maxDailySeasonExp}/${widget.maxDailySeasonExp})'
                       : '오늘 ${widget.todaySeasonExp}/${widget.maxDailySeasonExp} EXP 획득',
                   style: TextStyle(
@@ -231,7 +269,10 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.amber.withOpacity(0.3), Colors.orange.withOpacity(0.3)],
+          colors: [
+            Colors.amber.withOpacity(0.3),
+            Colors.orange.withOpacity(0.3),
+          ],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.amber.withOpacity(0.5)),
@@ -244,18 +285,30 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('프리미엄 패스', 
-                    style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
-                Text('더 많은 보상을 받으세요!', 
-                    style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                const Text(
+                  '프리미엄 패스',
+                  style: TextStyle(
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '더 많은 보상을 받으세요!',
+                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                ),
               ],
             ),
           ),
           ElevatedButton(
             onPressed: _showBuyPremiumDialog,
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
-            child: const Text('₩11,000',
-                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            child: const Text(
+              '₩11,000',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -267,13 +320,22 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF2a2a4a),
-        title: const Text('👑 프리미엄 패스 구매', style: TextStyle(color: Colors.amber)),
+        title: const Text(
+          '👑 프리미엄 패스 구매',
+          style: TextStyle(color: Colors.amber),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('가격: ₩11,000',
-                style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 18)),
+            const Text(
+              '가격: ₩11,000',
+              style: TextStyle(
+                color: Colors.amber,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
             const SizedBox(height: 16),
             const Text('프리미엄 혜택:', style: TextStyle(color: Colors.white)),
             const SizedBox(height: 8),
@@ -292,9 +354,9 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);  // 다이얼로그 닫기
-              Navigator.pop(context);  // 시즌패스 화면 닫기
-              widget.onBuyPremiumPass();  // 인앱 결제 시작
+              Navigator.pop(context); // 다이얼로그 닫기
+              Navigator.pop(context); // 시즌패스 화면 닫기
+              widget.onBuyPremiumPass(); // 인앱 결제 시작
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
             child: const Text('구매하기', style: TextStyle(color: Colors.black)),
@@ -311,8 +373,12 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
         children: [
           const Icon(Icons.check, color: Colors.green, size: 16),
           const SizedBox(width: 8),
-          Expanded(  // ✅ overflow 방지
-            child: Text(text, style: TextStyle(color: Colors.grey[300], fontSize: 13)),
+          Expanded(
+            // ✅ overflow 방지
+            child: Text(
+              text,
+              style: TextStyle(color: Colors.grey[300], fontSize: 13),
+            ),
           ),
         ],
       ),
@@ -325,12 +391,13 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
     final premiumClaimed = _localClaimedPremium.contains(r.level);
 
     return Container(
-      padding: const EdgeInsets.all(10),  // ✅ padding 줄임
+      padding: const EdgeInsets.all(10), // ✅ padding 줄임
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.25),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: reached && (!freeClaimed || (_localHasPremium && !premiumClaimed))
+          color:
+              reached && (!freeClaimed || (_localHasPremium && !premiumClaimed))
               ? Colors.amber.withOpacity(0.5)
               : Colors.white10,
         ),
@@ -339,7 +406,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
         children: [
           // 레벨 표시
           Container(
-            width: 40,  // ✅ 크기 줄임
+            width: 40, // ✅ 크기 줄임
             height: 40,
             alignment: Alignment.center,
             decoration: BoxDecoration(
@@ -347,7 +414,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              '${r.level}',  // ✅ 'Lv.' 제거
+              '${r.level}', // ✅ 'Lv.' 제거
               style: TextStyle(
                 color: reached ? Colors.amber : Colors.white54,
                 fontWeight: FontWeight.bold,
@@ -356,7 +423,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
             ),
           ),
           const SizedBox(width: 6),
-          
+
           // 일반 보상
           Expanded(
             child: _rewardColumn(
@@ -370,15 +437,19 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
               },
             ),
           ),
-          
+
           Container(width: 1, height: 50, color: Colors.white10),
           const SizedBox(width: 6),
-          
+
           // 프리미엄 보상
           Expanded(
             child: _rewardColumn(
               label: '👑 프리미엄',
-              chips: _buildChips(r.premiumGold, r.premiumDiamond, r.premiumStone),
+              chips: _buildChips(
+                r.premiumGold,
+                r.premiumDiamond,
+                r.premiumStone,
+              ),
               claimed: premiumClaimed,
               canClaim: _localHasPremium && reached && !premiumClaimed,
               locked: !_localHasPremium,
@@ -403,11 +474,16 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
   }) {
     return Column(
       children: [
-        Text(label, style: TextStyle(
-          color: locked ? Colors.grey : (label.contains('프리미엄') ? Colors.amber : Colors.white70),
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        )),
+        Text(
+          label,
+          style: TextStyle(
+            color: locked
+                ? Colors.grey
+                : (label.contains('프리미엄') ? Colors.amber : Colors.white70),
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 4),
         // ✅ overflow 방지: SingleChildScrollView + 제한된 높이
         SizedBox(
@@ -416,10 +492,14 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: chips.map((chip) => Padding(
-                padding: const EdgeInsets.only(right: 3),
-                child: chip,
-              )).toList(),
+              children: chips
+                  .map(
+                    (chip) => Padding(
+                      padding: const EdgeInsets.only(right: 3),
+                      child: chip,
+                    ),
+                  )
+                  .toList(),
             ),
           ),
         ),
@@ -450,7 +530,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
 
   List<Widget> _buildChips(int gold, int diamond, int stone) {
     final chips = <Widget>[];
-    if (gold > 0) chips.add(_chip('🪙', _formatShort(gold)));  // ✅ 축약 포맷
+    if (gold > 0) chips.add(_chip('🪙', _formatShort(gold))); // ✅ 축약 포맷
     if (diamond > 0) chips.add(_chip('💎', '$diamond'));
     if (stone > 0) chips.add(_chip('🔮', '$stone'));
     return chips;
@@ -468,12 +548,18 @@ class _SeasonPassScreenState extends State<SeasonPassScreen> {
 
   Widget _chip(String icon, String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),  // ✅ padding 줄임
+      padding: const EdgeInsets.symmetric(
+        horizontal: 4,
+        vertical: 2,
+      ), // ✅ padding 줄임
       decoration: BoxDecoration(
         color: Colors.white10,
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text('$icon$text', style: const TextStyle(color: Colors.white70, fontSize: 9)),  // ✅ 폰트 줄임
+      child: Text(
+        '$icon$text',
+        style: const TextStyle(color: Colors.white70, fontSize: 9),
+      ), // ✅ 폰트 줄임
     );
   }
 }

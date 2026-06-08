@@ -1,23 +1,20 @@
 enum SkillEffect {
   // 공격 효과
-  damage,      // 단순 피해 증폭
-  bleed,       // 지속 피해 (DOT) - 매 턴 고정 피해
-  pierce,      // 방어/가드 무시
-  critBoost,   // 치명타 확률 증가
-  
+  damage, // 단순 피해 증폭
+  bleed, // 지속 피해 (DOT) - 매 턴 고정 피해
+  pierce, // 방어/가드 무시
+  critBoost, // 치명타 확률 증가
   // 흡수/회복 효과
-  lifesteal,   // 피해의 일부 HP 회복
-  heal,        // 즉시 HP 회복
-  regen,       // 지속 회복 (HOT)
-  
+  lifesteal, // 피해의 일부 HP 회복
+  heal, // 즉시 HP 회복
+  regen, // 지속 회복 (HOT)
   // 디버프 효과
-  stun,        // 진짜 기절 (1턴 행동 불가)
-  slow,        // 적중률 감소 (기존 stun의 실제 효과)
-  weaken,      // 상대 공격력 감소
-  
+  stun, // 진짜 기절 (1턴 행동 불가)
+  slow, // 적중률 감소 (기존 stun의 실제 효과)
+  weaken, // 상대 공격력 감소
   // 버프 효과
-  shield,      // 피해 감소 (방어막)
-  dodge,       // 회피율 증가
+  shield, // 피해 감소 (방어막)
+  dodge, // 회피율 증가
   attackBoost, // 자신 공격력 증가
 }
 
@@ -52,7 +49,7 @@ extension SkillEffectExt on SkillEffect {
         return '강화';
     }
   }
-  
+
   String get emoji {
     switch (this) {
       case SkillEffect.damage:
@@ -83,7 +80,7 @@ extension SkillEffectExt on SkillEffect {
         return '📈';
     }
   }
-  
+
   /// 효과 설명
   String get description {
     switch (this) {

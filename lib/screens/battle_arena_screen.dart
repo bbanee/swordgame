@@ -13,6 +13,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../services/sound_service.dart';
 import '../widgets/sword_image_widget.dart';
+part 'battle_arena_screen/painters.dart';
 
 // =====================================================
 // 📦 파티클 데이터 클래스
@@ -23,22 +24,40 @@ class _ImpactParticle {
   final double speed;
   final double size;
   final Color color;
-  _ImpactParticle({required this.angle, required this.speed, required this.size, required this.color});
+  _ImpactParticle({
+    required this.angle,
+    required this.speed,
+    required this.size,
+    required this.color,
+  });
 }
 
 class _ConfettiPiece {
-  final double x;       // 0~1 normalized
-  final double speed;   // fall speed multiplier
-  final double wobble;  // horizontal oscillation
+  final double x; // 0~1 normalized
+  final double speed; // fall speed multiplier
+  final double wobble; // horizontal oscillation
   final double size;
   final double rotation;
   final Color color;
-  _ConfettiPiece({required this.x, required this.speed, required this.wobble, required this.size, required this.rotation, required this.color});
+  _ConfettiPiece({
+    required this.x,
+    required this.speed,
+    required this.wobble,
+    required this.size,
+    required this.rotation,
+    required this.color,
+  });
 }
 
 class _BgParticle {
   double x, y, speed, size, opacity;
-  _BgParticle({required this.x, required this.y, required this.speed, required this.size, required this.opacity});
+  _BgParticle({
+    required this.x,
+    required this.y,
+    required this.speed,
+    required this.size,
+    required this.opacity,
+  });
 }
 
 // =====================================================
@@ -50,6 +69,7 @@ class BattleArenaScreen extends StatefulWidget {
   final BattleParticipant opponent;
   final BattleResult result;
   final int stoneReward;
+  final bool showLootReward;
 
   const BattleArenaScreen({
     super.key,
@@ -57,15 +77,15 @@ class BattleArenaScreen extends StatefulWidget {
     required this.opponent,
     required this.result,
     this.stoneReward = 0,
+    this.showLootReward = true,
   });
 
   @override
   State<BattleArenaScreen> createState() => _BattleArenaScreenState();
 }
 
-class _BattleArenaScreenState extends State<BattleArenaScreen> 
+class _BattleArenaScreenState extends State<BattleArenaScreen>
     with TickerProviderStateMixin {
-
   // ── 공격 모션 ──
   late AnimationController _playerController;
   late Animation<double> _playerBodyX;
@@ -140,39 +160,65 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     _oppCurrentHp = _oppMaxHp;
 
     // 배경 파티클
-    _bgParticles = List.generate(25, (_) => _BgParticle(
-      x: _rng.nextDouble(), y: _rng.nextDouble(),
-      speed: 0.15 + _rng.nextDouble() * 0.4,
-      size: 1.0 + _rng.nextDouble() * 2.5,
-      opacity: 0.1 + _rng.nextDouble() * 0.35,
-    ));
+    _bgParticles = List.generate(
+      25,
+      (_) => _BgParticle(
+        x: _rng.nextDouble(),
+        y: _rng.nextDouble(),
+        speed: 0.15 + _rng.nextDouble() * 0.4,
+        size: 1.0 + _rng.nextDouble() * 2.5,
+        opacity: 0.1 + _rng.nextDouble() * 0.35,
+      ),
+    );
 
     // ── 플레이어 공격 ──
-    _playerController = AnimationController(duration: const Duration(milliseconds: 300), vsync: this);
-    _playerBodyX = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: 40), weight: 40),
-      TweenSequenceItem(tween: Tween(begin: 40, end: 0), weight: 60),
-    ]).animate(CurvedAnimation(parent: _playerController, curve: Curves.easeOut));
+    _playerController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _playerBodyX =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0, end: 40), weight: 40),
+          TweenSequenceItem(tween: Tween(begin: 40, end: 0), weight: 60),
+        ]).animate(
+          CurvedAnimation(parent: _playerController, curve: Curves.easeOut),
+        );
 
     // ── 적 공격 ──
-    _enemyController = AnimationController(duration: const Duration(milliseconds: 300), vsync: this);
-    _enemyBodyX = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -40), weight: 40),
-      TweenSequenceItem(tween: Tween(begin: -40, end: 0), weight: 60),
-    ]).animate(CurvedAnimation(parent: _enemyController, curve: Curves.easeOut));
+    _enemyController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _enemyBodyX = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0, end: -40), weight: 40),
+        TweenSequenceItem(tween: Tween(begin: -40, end: 0), weight: 60),
+      ],
+    ).animate(CurvedAnimation(parent: _enemyController, curve: Curves.easeOut));
 
     // ── 피격 쉐이크 ──
-    _hitController = AnimationController(duration: const Duration(milliseconds: 120), vsync: this);
+    _hitController = AnimationController(
+      duration: const Duration(milliseconds: 120),
+      vsync: this,
+    );
 
     // ── 크리티컬 화면 쉐이크 ──
-    _screenShakeController = AnimationController(duration: const Duration(milliseconds: 350), vsync: this);
+    _screenShakeController = AnimationController(
+      duration: const Duration(milliseconds: 350),
+      vsync: this,
+    );
 
     // ── 슬래시 이펙트 (임팩트: 피격쪽 큰 슬래시) ──
-    _slashController = AnimationController(duration: const Duration(milliseconds: 350), vsync: this);
-    _slashScale = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.3, end: 1.2), weight: 40),
-      TweenSequenceItem(tween: Tween(begin: 1.2, end: 1.0), weight: 60),
-    ]).animate(CurvedAnimation(parent: _slashController, curve: Curves.easeOut));
+    _slashController = AnimationController(
+      duration: const Duration(milliseconds: 350),
+      vsync: this,
+    );
+    _slashScale = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0.3, end: 1.2), weight: 40),
+        TweenSequenceItem(tween: Tween(begin: 1.2, end: 1.0), weight: 60),
+      ],
+    ).animate(CurvedAnimation(parent: _slashController, curve: Curves.easeOut));
     _slashOpacity = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 20),
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 40),
@@ -180,11 +226,17 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     ]).animate(_slashController);
 
     // ── 스윙 슬래시 (공격쪽 작은 슬래시, 약간 빠르게) ──
-    _swingSlashController = AnimationController(duration: const Duration(milliseconds: 280), vsync: this);
-    _swingScale = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.2, end: 1.0), weight: 35),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.8), weight: 65),
-    ]).animate(CurvedAnimation(parent: _swingSlashController, curve: Curves.easeOut));
+    _swingSlashController = AnimationController(
+      duration: const Duration(milliseconds: 280),
+      vsync: this,
+    );
+    _swingScale =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0.2, end: 1.0), weight: 35),
+          TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.8), weight: 65),
+        ]).animate(
+          CurvedAnimation(parent: _swingSlashController, curve: Curves.easeOut),
+        );
     _swingOpacity = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.7), weight: 15),
       TweenSequenceItem(tween: Tween(begin: 0.7, end: 0.7), weight: 35),
@@ -192,23 +244,39 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     ]).animate(_swingSlashController);
 
     // ── 임팩트 파티클 ──
-    _impactController = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
-
-    // ── 앰비언트 (3초 루프) ──
-    _ambientController = AnimationController(duration: const Duration(seconds: 3), vsync: this)..repeat();
-
-    // ── 화면 플래시 ──
-    _flashController = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
-    _flashOpacity = Tween<double>(begin: 0.5, end: 0.0).animate(
-      CurvedAnimation(parent: _flashController, curve: Curves.easeOut),
+    _impactController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
     );
 
+    // ── 앰비언트 (3초 루프) ──
+    _ambientController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    )..repeat();
+
+    // ── 화면 플래시 ──
+    _flashController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _flashOpacity = Tween<double>(
+      begin: 0.5,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _flashController, curve: Curves.easeOut));
+
     // ── 승패 연출 ──
-    _victoryController = AnimationController(duration: const Duration(milliseconds: 2000), vsync: this);
+    _victoryController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
 
     // 자동 재생
     _autoPlayTimer = Timer.periodic(const Duration(milliseconds: 50), (t) {
-      if (_battleFinished) { t.cancel(); return; }
+      if (_battleFinished) {
+        t.cancel();
+        return;
+      }
       _showNextLog();
     });
   }
@@ -239,7 +307,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       return;
     }
     final log = widget.result.logs[_currentLogIndex];
-    setState(() { _displayedLogs.add(log); _currentLogIndex++; });
+    setState(() {
+      _displayedLogs.add(log);
+      _currentLogIndex++;
+    });
     _parseLog(log);
   }
 
@@ -254,29 +325,42 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       SoundService().playBattleWin();
       // 컨페티 생성
       final gradeColor = widget.me.grade.color;
-      _confettiPieces = List.generate(40, (_) => _ConfettiPiece(
-        x: _rng.nextDouble(),
-        speed: 0.5 + _rng.nextDouble() * 0.8,
-        wobble: _rng.nextDouble() * 30 - 15,
-        size: 4 + _rng.nextDouble() * 6,
-        rotation: _rng.nextDouble() * pi * 2,
-        color: [gradeColor, Colors.amber, Colors.white, Colors.yellow, Colors.orange][_rng.nextInt(5)],
-      ));
+      _confettiPieces = List.generate(
+        40,
+        (_) => _ConfettiPiece(
+          x: _rng.nextDouble(),
+          speed: 0.5 + _rng.nextDouble() * 0.8,
+          wobble: _rng.nextDouble() * 30 - 15,
+          size: 4 + _rng.nextDouble() * 6,
+          rotation: _rng.nextDouble() * pi * 2,
+          color: [
+            gradeColor,
+            Colors.amber,
+            Colors.white,
+            Colors.yellow,
+            Colors.orange,
+          ][_rng.nextInt(5)],
+        ),
+      );
     } else {
       SoundService().playBattleLose();
     }
     _victoryController.forward(from: 0);
-    Future.delayed(const Duration(seconds: 2), () => SoundService().playMainBgm());
+    Future.delayed(
+      const Duration(seconds: 2),
+      () => SoundService().playMainBgm(),
+    );
   }
 
   void _parseLog(String log) {
     // HP 상태
     if (log.startsWith('📊 HP:')) {
       final m = RegExp(r'(\d+)/(\d+)').allMatches(log).toList();
-      if (m.length >= 2) setState(() {
-        _myCurrentHp = int.parse(m[0].group(1)!).clamp(0, _myMaxHp);
-        _oppCurrentHp = int.parse(m[1].group(1)!).clamp(0, _oppMaxHp);
-      });
+      if (m.length >= 2)
+        setState(() {
+          _myCurrentHp = int.parse(m[0].group(1)!).clamp(0, _myMaxHp);
+          _oppCurrentHp = int.parse(m[1].group(1)!).clamp(0, _oppMaxHp);
+        });
       return;
     }
 
@@ -292,7 +376,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final isCrit = log.contains('크리티컬') || log.contains('💥');
 
     // 내 공격
-    if (log.contains('⚔️') && log.contains(widget.me.name) && log.contains('→')) {
+    if (log.contains('⚔️') &&
+        log.contains(widget.me.name) &&
+        log.contains('→')) {
       setState(() => _isPlayerTurn = true);
       _playerController.forward(from: 0);
       SoundService().playBattleHit();
@@ -308,7 +394,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     }
 
     // 적 공격
-    if (log.contains('⚔️') && log.contains(widget.opponent.name) && log.contains('→')) {
+    if (log.contains('⚔️') &&
+        log.contains(widget.opponent.name) &&
+        log.contains('→')) {
       setState(() => _isPlayerTurn = false);
       _enemyController.forward(from: 0);
       SoundService().playBattleHit();
@@ -354,13 +442,16 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final baseColors = _isCritical
         ? [Colors.yellow, Colors.amber, Colors.orange, Colors.white]
         : [Colors.red, Colors.orange, Colors.yellow, Colors.white70];
-    
-    _impactParticles = List.generate(_isCritical ? 16 : 10, (_) => _ImpactParticle(
-      angle: _rng.nextDouble() * pi * 2,
-      speed: 30 + _rng.nextDouble() * (_isCritical ? 60 : 40),
-      size: 2 + _rng.nextDouble() * (_isCritical ? 4 : 3),
-      color: baseColors[_rng.nextInt(baseColors.length)],
-    ));
+
+    _impactParticles = List.generate(
+      _isCritical ? 16 : 10,
+      (_) => _ImpactParticle(
+        angle: _rng.nextDouble() * pi * 2,
+        speed: 30 + _rng.nextDouble() * (_isCritical ? 60 : 40),
+        size: 2 + _rng.nextDouble() * (_isCritical ? 4 : 3),
+        color: baseColors[_rng.nextInt(baseColors.length)],
+      ),
+    );
     setState(() => _impactOnPlayer = onPlayer);
     _impactController.forward(from: 0);
   }
@@ -369,14 +460,19 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     Future.delayed(const Duration(milliseconds: 50), () {
       if (!mounted) return;
       setState(() {
-        if (isPlayer) _showDamageOnPlayer = true;
-        else _showDamageOnEnemy = true;
+        if (isPlayer)
+          _showDamageOnPlayer = true;
+        else
+          _showDamageOnEnemy = true;
       });
       _hitController.forward(from: 0);
     });
     Future.delayed(const Duration(milliseconds: 350), () {
       if (!mounted) return;
-      setState(() { _showDamageOnPlayer = false; _showDamageOnEnemy = false; });
+      setState(() {
+        _showDamageOnPlayer = false;
+        _showDamageOnEnemy = false;
+      });
     });
   }
 
@@ -399,17 +495,35 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
     String? effect;
     Color? flash;
-    if (log.contains('🔥'))      { effect = '🔥'; flash = Colors.orange; }
-    else if (log.contains('💧')) { effect = '💧'; flash = Colors.blue; }
-    else if (log.contains('⚡')) { effect = '⚡'; flash = Colors.yellow; }
-    else if (log.contains('🌿')) { effect = '🌿'; flash = Colors.green; }
-    else if (log.contains('💀')) { effect = '💀'; flash = Colors.purple; }
-    else if (log.contains('✨')) { effect = '✨'; flash = Colors.amber; }
-    else if (log.contains('💥')) { effect = '💥'; flash = Colors.red; }
+    if (log.contains('🔥')) {
+      effect = '🔥';
+      flash = Colors.orange;
+    } else if (log.contains('💧')) {
+      effect = '💧';
+      flash = Colors.blue;
+    } else if (log.contains('⚡')) {
+      effect = '⚡';
+      flash = Colors.yellow;
+    } else if (log.contains('🌿')) {
+      effect = '🌿';
+      flash = Colors.green;
+    } else if (log.contains('💀')) {
+      effect = '💀';
+      flash = Colors.purple;
+    } else if (log.contains('✨')) {
+      effect = '✨';
+      flash = Colors.amber;
+    } else if (log.contains('💥')) {
+      effect = '💥';
+      flash = Colors.red;
+    }
 
     if (effect != null) {
       setState(() => _currentEffect = effect);
-      if (flash != null) { _flashColor = flash; _flashController.forward(from: 0); }
+      if (flash != null) {
+        _flashColor = flash;
+        _flashController.forward(from: 0);
+      }
       Future.delayed(const Duration(milliseconds: 350), () {
         if (mounted) setState(() => _currentEffect = null);
       });
@@ -435,15 +549,28 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF080816),
       appBar: AppBar(
-        title: Text(_battleFinished ? (isWin ? '🏆 승리!' : '💀 패배...') : '⚔️ 배틀 중...'),
-        backgroundColor: Colors.transparent, elevation: 0,
+        title: Text(
+          _battleFinished ? (isWin ? '🏆 승리!' : '💀 패배...') : '⚔️ 배틀 중...',
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           if (!_battleFinished)
-            TextButton(onPressed: _skipToEnd, child: const Text('스킵 >>', style: TextStyle(color: Colors.white70))),
+            TextButton(
+              onPressed: _skipToEnd,
+              child: const Text(
+                '스킵 >>',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
           IconButton(
             onPressed: () {
-              Clipboard.setData(ClipboardData(text: widget.result.logs.join('\n')));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('로그 복사완료')));
+              Clipboard.setData(
+                ClipboardData(text: widget.result.logs.join('\n')),
+              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('로그 복사완료')));
             },
             icon: const Icon(Icons.copy),
           ),
@@ -459,9 +586,14 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                 animation: _screenShakeController,
                 builder: (context, child) {
                   final shake = _screenShakeController.isAnimating
-                      ? sin(_screenShakeController.value * pi * 10) * 8 * (1 - _screenShakeController.value)
+                      ? sin(_screenShakeController.value * pi * 10) *
+                            8 *
+                            (1 - _screenShakeController.value)
                       : 0.0;
-                  return Transform.translate(offset: Offset(shake, shake * 0.4), child: child);
+                  return Transform.translate(
+                    offset: Offset(shake, shake * 0.4),
+                    child: child,
+                  );
                 },
                 child: _buildBattleArena(),
               ),
@@ -486,7 +618,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _battleFinished
-              ? (widget.result.isWin ? Colors.green : Colors.red).withOpacity(0.5)
+              ? (widget.result.isWin ? Colors.green : Colors.red).withOpacity(
+                  0.5,
+                )
               : Colors.white24,
           width: _battleFinished ? 2 : 1,
         ),
@@ -547,17 +681,20 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             errorBuilder: (_, __, ___) => Container(
               decoration: const BoxDecoration(
                 gradient: RadialGradient(
-                  center: Alignment.center, radius: 1.2,
-                  colors: [Color(0xFF1a1a3e), Color(0xFF0e0e24), Color(0xFF060612)],
+                  center: Alignment.center,
+                  radius: 1.2,
+                  colors: [
+                    Color(0xFF1a1a3e),
+                    Color(0xFF0e0e24),
+                    Color(0xFF060612),
+                  ],
                 ),
               ),
             ),
           ),
         ),
         // 살짝 어둡게 오버레이 (UI 가독성)
-        Positioned.fill(
-          child: Container(color: Colors.black.withOpacity(0.3)),
-        ),
+        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.3))),
       ],
     );
   }
@@ -568,7 +705,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       animation: _ambientController,
       builder: (context, _) => CustomPaint(
         size: Size.infinite,
-        painter: _BgParticlePainter(particles: _bgParticles, progress: _ambientController.value),
+        painter: _BgParticlePainter(
+          particles: _bgParticles,
+          progress: _ambientController.value,
+        ),
       ),
     );
   }
@@ -576,14 +716,20 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   // ── 바닥 라인 ──
   Widget _buildFloorLine() {
     return Positioned(
-      bottom: 50, left: 20, right: 20,
+      bottom: 50,
+      left: 20,
+      right: 20,
       child: Container(
         height: 1,
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [
-            Colors.transparent, Colors.white.withOpacity(0.12),
-            Colors.white.withOpacity(0.12), Colors.transparent,
-          ]),
+          gradient: LinearGradient(
+            colors: [
+              Colors.transparent,
+              Colors.white.withOpacity(0.12),
+              Colors.white.withOpacity(0.12),
+              Colors.transparent,
+            ],
+          ),
         ),
       ),
     );
@@ -594,17 +740,26 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return AnimatedBuilder(
       animation: _ambientController,
       builder: (context, _) {
-        final pulse = (0.03 + sin(_ambientController.value * pi * 2) * 0.02).clamp(0.0, 0.1);
+        final pulse = (0.03 + sin(_ambientController.value * pi * 2) * 0.02)
+            .clamp(0.0, 0.1);
         return Positioned.fill(
           child: Row(
             children: [
-              Expanded(child: Container(
-                color: _isPlayerTurn ? Colors.cyan.withOpacity(pulse) : Colors.transparent,
-              )),
+              Expanded(
+                child: Container(
+                  color: _isPlayerTurn
+                      ? Colors.cyan.withOpacity(pulse)
+                      : Colors.transparent,
+                ),
+              ),
               const SizedBox(width: 40), // VS 공간
-              Expanded(child: Container(
-                color: !_isPlayerTurn ? Colors.red.withOpacity(pulse) : Colors.transparent,
-              )),
+              Expanded(
+                child: Container(
+                  color: !_isPlayerTurn
+                      ? Colors.red.withOpacity(pulse)
+                      : Colors.transparent,
+                ),
+              ),
             ],
           ),
         );
@@ -621,14 +776,17 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           // 플레이어
           Expanded(
             child: AnimatedBuilder(
-              animation: Listenable.merge([_playerController, _victoryController]),
+              animation: Listenable.merge([
+                _playerController,
+                _victoryController,
+              ]),
               builder: (context, _) {
                 double extraScale = 1.0;
                 double grayscale = 0.0;
                 if (_battleFinished) {
                   final v = _victoryController.value;
                   if (widget.result.isWin) {
-                    extraScale = 1.0 + v * 0.15;  // 승자 확대
+                    extraScale = 1.0 + v * 0.15; // 승자 확대
                   } else {
                     grayscale = v; // 패자 흑백
                     extraScale = 1.0 - v * 0.1;
@@ -640,13 +798,19 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                     scale: extraScale.clamp(0.5, 1.5),
                     child: ColorFiltered(
                       colorFilter: grayscale > 0
-                          ? ColorFilter.matrix(_grayscaleMatrix(grayscale.clamp(0.0, 1.0)))
-                          : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+                          ? ColorFilter.matrix(
+                              _grayscaleMatrix(grayscale.clamp(0.0, 1.0)),
+                            )
+                          : const ColorFilter.mode(
+                              Colors.transparent,
+                              BlendMode.dst,
+                            ),
                       child: _buildFighter(
                         name: widget.me.name,
                         grade: widget.me.grade,
                         element: widget.me.element,
                         swordName: widget.me.swordName,
+                        swordId: widget.me.swordId,
                         swordLevel: widget.me.swordLevel,
                         currentHp: _myCurrentHp,
                         maxHp: _myMaxHp,
@@ -663,7 +827,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           // 적
           Expanded(
             child: AnimatedBuilder(
-              animation: Listenable.merge([_enemyController, _victoryController]),
+              animation: Listenable.merge([
+                _enemyController,
+                _victoryController,
+              ]),
               builder: (context, _) {
                 double extraScale = 1.0;
                 double grayscale = 0.0;
@@ -682,13 +849,19 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                     scale: extraScale.clamp(0.5, 1.5),
                     child: ColorFiltered(
                       colorFilter: grayscale > 0
-                          ? ColorFilter.matrix(_grayscaleMatrix(grayscale.clamp(0.0, 1.0)))
-                          : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+                          ? ColorFilter.matrix(
+                              _grayscaleMatrix(grayscale.clamp(0.0, 1.0)),
+                            )
+                          : const ColorFilter.mode(
+                              Colors.transparent,
+                              BlendMode.dst,
+                            ),
                       child: _buildFighter(
                         name: widget.opponent.name,
                         grade: widget.opponent.grade,
                         element: widget.opponent.element,
                         swordName: widget.opponent.swordName,
+                        swordId: widget.opponent.swordId,
                         swordLevel: widget.opponent.swordLevel,
                         currentHp: _oppCurrentHp,
                         maxHp: _oppMaxHp,
@@ -713,10 +886,26 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final g = 0.7152 * strength;
     final b = 0.0722 * strength;
     return [
-      r + s, g, b, 0, 0,
-      r, g + s, b, 0, 0,
-      r, g, b + s, 0, 0,
-      0, 0, 0, 1, 0,
+      r + s,
+      g,
+      b,
+      0,
+      0,
+      r,
+      g + s,
+      b,
+      0,
+      0,
+      r,
+      g,
+      b + s,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
     ];
   }
 
@@ -728,6 +917,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     required SwordGrade grade,
     required GameElement element,
     required String swordName,
+    required String? swordId,
     required int swordLevel,
     required int currentHp,
     required int maxHp,
@@ -749,10 +939,15 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // 이름
-              Text(name,
+              Text(
+                name,
                 style: TextStyle(
-                  color: grade.color, fontWeight: FontWeight.bold, fontSize: 12,
-                  shadows: [Shadow(color: grade.color.withOpacity(0.6), blurRadius: 10)],
+                  color: grade.color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  shadows: [
+                    Shadow(color: grade.color.withOpacity(0.6), blurRadius: 10),
+                  ],
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -771,7 +966,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                       child: AnimatedBuilder(
                         animation: _ambientController,
                         builder: (context, _) {
-                          final pulse = 0.7 + sin(_ambientController.value * pi * 2) * 0.3;
+                          final pulse =
+                              0.7 +
+                              sin(_ambientController.value * pi * 2) * 0.3;
                           return Container(
                             width: 70 * pulse,
                             height: 16,
@@ -780,14 +977,24 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                               borderRadius: BorderRadius.circular(35),
                               gradient: RadialGradient(
                                 colors: [
-                                  grade.color.withOpacity(isDead ? 0.05 : 0.35 * pulse),
+                                  grade.color.withOpacity(
+                                    isDead ? 0.05 : 0.35 * pulse,
+                                  ),
                                   grade.color.withOpacity(isDead ? 0.0 : 0.1),
                                   Colors.transparent,
                                 ],
                               ),
-                              boxShadow: isDead ? null : [
-                                BoxShadow(color: grade.color.withOpacity(0.2 * pulse), blurRadius: 16, spreadRadius: 2),
-                              ],
+                              boxShadow: isDead
+                                  ? null
+                                  : [
+                                      BoxShadow(
+                                        color: grade.color.withOpacity(
+                                          0.2 * pulse,
+                                        ),
+                                        blurRadius: 16,
+                                        spreadRadius: 2,
+                                      ),
+                                    ],
                             ),
                           );
                         },
@@ -812,7 +1019,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                                   ? 'assets/images/battle/char_player.webp'
                                   : 'assets/images/battle/char_enemy.webp',
                               fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                              errorBuilder: (_, __, ___) =>
+                                  const SizedBox.shrink(),
                             ),
                           ),
                         ),
@@ -827,6 +1035,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                         child: SwordImageWidget(
                           grade: grade,
                           element: element,
+                          swordId: swordId,
                           level: swordLevel,
                           size: 55,
                           showPulse: !isDead && !_battleFinished,
@@ -837,20 +1046,36 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                     // 피격 링
                     if (isHit)
                       Container(
-                        width: 80, height: 80,
+                        width: 80,
+                        height: 80,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.red.withOpacity(0.7), width: 2),
-                          boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 20, spreadRadius: 4)],
+                          border: Border.all(
+                            color: Colors.red.withOpacity(0.7),
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.4),
+                              blurRadius: 20,
+                              spreadRadius: 4,
+                            ),
+                          ],
                         ),
                       ),
 
                     // 사망 마크
                     if (isDead)
                       Container(
-                        width: 45, height: 45,
-                        decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black.withOpacity(0.6)),
-                        child: const Center(child: Text('💀', style: TextStyle(fontSize: 26))),
+                        width: 45,
+                        height: 45,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.black.withOpacity(0.6),
+                        ),
+                        child: const Center(
+                          child: Text('💀', style: TextStyle(fontSize: 26)),
+                        ),
                       ),
 
                     // 데미지 팝업
@@ -858,21 +1083,39 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                       Positioned(
                         top: -2,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(8),
-                            border: _isCritical ? Border.all(color: Colors.yellow, width: 1) : null,
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(8),
+                            border: _isCritical
+                                ? Border.all(color: Colors.yellow, width: 1)
+                                : null,
                           ),
                           child: Column(
                             children: [
                               if (_isCritical)
-                                const Text('CRITICAL!', style: TextStyle(color: Colors.yellow, fontSize: 9, fontWeight: FontWeight.bold)),
-                              Text('-${formatNumber(_lastDamage)}',
+                                const Text(
+                                  'CRITICAL!',
+                                  style: TextStyle(
+                                    color: Colors.yellow,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              Text(
+                                '-${formatNumber(_lastDamage)}',
                                 style: TextStyle(
-                                  color: _isCritical ? Colors.yellow : Colors.red[300],
+                                  color: _isCritical
+                                      ? Colors.yellow
+                                      : Colors.red[300],
                                   fontSize: _isCritical ? 18 : 15,
                                   fontWeight: FontWeight.bold,
-                                  shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+                                  shadows: const [
+                                    Shadow(color: Colors.black, blurRadius: 4),
+                                  ],
                                 ),
                               ),
                             ],
@@ -885,7 +1128,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
               const SizedBox(height: 2),
 
               // 검 이름
-              Text('${element.emoji} $swordName +$swordLevel',
+              Text(
+                '${element.emoji} $swordName +$swordLevel',
                 style: const TextStyle(color: Colors.white60, fontSize: 10),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -902,40 +1146,67 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   // ── HP 바 ──
   Widget _buildHpBar(int hp, int maxHp, double pct) {
-    final c = pct > 0.5 ? Colors.green : pct > 0.2 ? Colors.orange : Colors.red;
+    final c = pct > 0.5
+        ? Colors.green
+        : pct > 0.2
+        ? Colors.orange
+        : Colors.red;
     return Column(
       children: [
         Container(
-          width: 90, height: 10,
+          width: 90,
+          height: 10,
           decoration: BoxDecoration(
-            color: Colors.grey[900], borderRadius: BorderRadius.circular(5),
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(5),
             border: Border.all(color: Colors.white24),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(5),
-            child: Stack(children: [
-              FractionallySizedBox(
-                alignment: Alignment.centerLeft, widthFactor: pct,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [c.withOpacity(0.8), c]),
-                    boxShadow: [BoxShadow(color: c.withOpacity(0.5), blurRadius: 4)],
+            child: Stack(
+              children: [
+                FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: pct,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [c.withOpacity(0.8), c]),
+                      boxShadow: [
+                        BoxShadow(color: c.withOpacity(0.5), blurRadius: 4),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Positioned(top: 1, left: 2, right: 2, child: Container(
-                height: 3,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.white.withOpacity(0.2), Colors.transparent]),
-                  borderRadius: BorderRadius.circular(2),
+                Positioned(
+                  top: 1,
+                  left: 2,
+                  right: 2,
+                  child: Container(
+                    height: 3,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.2),
+                          Colors.transparent,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
-              )),
-            ]),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 2),
-        Text('${formatNumber(hp)} / ${formatNumber(maxHp)}',
-          style: TextStyle(color: c.withOpacity(0.9), fontSize: 9, fontWeight: FontWeight.bold)),
+        Text(
+          '${formatNumber(hp)} / ${formatNumber(maxHp)}',
+          style: TextStyle(
+            color: c.withOpacity(0.9),
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }
@@ -951,16 +1222,26 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         return Transform.scale(
           scale: pulse,
           child: Container(
-            width: 42, height: 42,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [Colors.red.withOpacity(0.4), Colors.transparent]),
+              gradient: RadialGradient(
+                colors: [Colors.red.withOpacity(0.4), Colors.transparent],
+              ),
             ),
             child: Center(
-              child: Text('VS', style: TextStyle(
-                color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold,
-                shadows: [Shadow(color: Colors.red.withOpacity(0.8), blurRadius: 12)],
-              )),
+              child: Text(
+                'VS',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    Shadow(color: Colors.red.withOpacity(0.8), blurRadius: 12),
+                  ],
+                ),
+              ),
             ),
           ),
         );
@@ -978,11 +1259,14 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         AnimatedBuilder(
           animation: _swingSlashController,
           builder: (context, _) {
-            if (!_swingSlashController.isAnimating) return const SizedBox.shrink();
+            if (!_swingSlashController.isAnimating)
+              return const SizedBox.shrink();
             final attackerSide = !_slashOnPlayer;
             return Positioned.fill(
               child: Align(
-                alignment: attackerSide ? const Alignment(-0.4, -0.1) : const Alignment(0.4, -0.1),
+                alignment: attackerSide
+                    ? const Alignment(-0.4, -0.1)
+                    : const Alignment(0.4, -0.1),
                 child: Transform.scale(
                   scale: (_swingScale.value * 0.7).clamp(0.1, 1.5),
                   child: Transform(
@@ -1020,11 +1304,14 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         AnimatedBuilder(
           animation: _swingSlashController,
           builder: (context, _) {
-            if (!_swingSlashController.isAnimating) return const SizedBox.shrink();
+            if (!_swingSlashController.isAnimating)
+              return const SizedBox.shrink();
             final victimSide = _slashOnPlayer;
             return Positioned.fill(
               child: Align(
-                alignment: victimSide ? const Alignment(-0.35, 0.05) : const Alignment(0.35, 0.05),
+                alignment: victimSide
+                    ? const Alignment(-0.35, 0.05)
+                    : const Alignment(0.35, 0.05),
                 child: Transform.scale(
                   scale: (_swingScale.value * 0.7).clamp(0.1, 1.5),
                   child: Transform(
@@ -1065,12 +1352,15 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             if (!_slashController.isAnimating) return const SizedBox.shrink();
             return Positioned.fill(
               child: Align(
-                alignment: _slashOnPlayer ? const Alignment(-0.5, 0.0) : const Alignment(0.5, 0.0),
+                alignment: _slashOnPlayer
+                    ? const Alignment(-0.5, 0.0)
+                    : const Alignment(0.5, 0.0),
                 child: Transform.scale(
                   scale: _slashScale.value.clamp(0.1, 2.0),
                   child: Transform(
                     alignment: Alignment.center,
-                    transform: Matrix4.identity()..scale(_slashOnPlayer ? -1.0 : 1.0, 1.0),
+                    transform: Matrix4.identity()
+                      ..scale(_slashOnPlayer ? -1.0 : 1.0, 1.0),
                     child: Opacity(
                       opacity: _slashOpacity.value.clamp(0.0, 1.0),
                       child: SizedBox(
@@ -1078,7 +1368,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                         height: 120,
                         child: Image.asset(
                           'assets/images/battle/slash_effect.webp',
-                          color: _isCritical ? Colors.yellow.withOpacity(0.8) : null,
+                          color: _isCritical
+                              ? Colors.yellow.withOpacity(0.8)
+                              : null,
                           colorBlendMode: BlendMode.modulate,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => CustomPaint(
@@ -1107,12 +1399,16 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return AnimatedBuilder(
       animation: _impactController,
       builder: (context, _) {
-        if (!_impactController.isAnimating || _impactParticles.isEmpty) return const SizedBox.shrink();
+        if (!_impactController.isAnimating || _impactParticles.isEmpty)
+          return const SizedBox.shrink();
         return Positioned.fill(
           child: Align(
-            alignment: _impactOnPlayer ? const Alignment(-0.5, 0.0) : const Alignment(0.5, 0.0),
+            alignment: _impactOnPlayer
+                ? const Alignment(-0.5, 0.0)
+                : const Alignment(0.5, 0.0),
             child: SizedBox(
-              width: 120, height: 120,
+              width: 120,
+              height: 120,
               child: CustomPaint(
                 painter: _ImpactPainter(
                   particles: _impactParticles,
@@ -1143,17 +1439,30 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   // ── 스킬 발동 배너 ──
   Widget _buildSkillBanner() {
     return Positioned(
-      top: 14, left: 0, right: 0,
+      top: 14,
+      left: 0,
+      right: 0,
       child: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [Colors.transparent, Colors.amber.withOpacity(0.35), Colors.transparent]),
+            gradient: LinearGradient(
+              colors: [
+                Colors.transparent,
+                Colors.amber.withOpacity(0.35),
+                Colors.transparent,
+              ],
+            ),
             borderRadius: BorderRadius.circular(4),
           ),
-          child: Text('⚡ $_skillActivationText',
-            style: const TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.bold,
-              shadows: [Shadow(color: Colors.black, blurRadius: 8)]),
+          child: Text(
+            '⚡ $_skillActivationText',
+            style: const TextStyle(
+              color: Colors.amber,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+            ),
           ),
         ),
       ),
@@ -1169,7 +1478,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         return Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
-              color: _flashColor.withOpacity(_flashOpacity.value.clamp(0.0, 1.0)),
+              color: _flashColor.withOpacity(
+                _flashOpacity.value.clamp(0.0, 1.0),
+              ),
               borderRadius: BorderRadius.circular(15),
             ),
           ),
@@ -1196,16 +1507,23 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
               children: [
                 // 승자 쪽 빛 폭발
                 Align(
-                  alignment: isWin ? const Alignment(-0.5, 0.0) : const Alignment(0.5, 0.0),
+                  alignment: isWin
+                      ? const Alignment(-0.5, 0.0)
+                      : const Alignment(0.5, 0.0),
                   child: Container(
                     width: 150 * v,
                     height: 150 * v,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: RadialGradient(colors: [
-                        (isWin ? widget.me.grade.color : widget.opponent.grade.color).withOpacity((0.4 * (1 - v)).clamp(0.0, 1.0)),
-                        Colors.transparent,
-                      ]),
+                      gradient: RadialGradient(
+                        colors: [
+                          (isWin
+                                  ? widget.me.grade.color
+                                  : widget.opponent.grade.color)
+                              .withOpacity((0.4 * (1 - v)).clamp(0.0, 1.0)),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -1250,13 +1568,25 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            const Icon(Icons.list_alt, color: Colors.white54, size: 16),
-            const SizedBox(width: 6),
-            const Text('배틀 로그', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 12)),
-            const Spacer(),
-            Text('${_currentLogIndex}/${widget.result.logs.length}', style: const TextStyle(color: Colors.white38, fontSize: 10)),
-          ]),
+          Row(
+            children: [
+              const Icon(Icons.list_alt, color: Colors.white54, size: 16),
+              const SizedBox(width: 6),
+              const Text(
+                '배틀 로그',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${_currentLogIndex}/${widget.result.logs.length}',
+                style: const TextStyle(color: Colors.white38, fontSize: 10),
+              ),
+            ],
+          ),
           const Divider(color: Colors.white12, height: 8),
           Expanded(
             child: ListView.builder(
@@ -1268,12 +1598,27 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                 if (log.startsWith('📊 HP:')) return const SizedBox.shrink();
                 final isRecent = ri == _displayedLogs.length - 1;
                 return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 1,
+                    horizontal: 4,
+                  ),
                   margin: const EdgeInsets.only(bottom: 1),
-                  decoration: isRecent ? BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(4)) : null,
-                  child: Text(log,
-                    style: TextStyle(color: _logColor(log), fontSize: 11,
-                      fontWeight: isRecent ? FontWeight.bold : FontWeight.normal)),
+                  decoration: isRecent
+                      ? BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(4),
+                        )
+                      : null,
+                  child: Text(
+                    log,
+                    style: TextStyle(
+                      color: _logColor(log),
+                      fontSize: 11,
+                      fontWeight: isRecent
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
                 );
               },
             ),
@@ -1287,7 +1632,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     if (l.contains('승리') || l.contains('쓰러졌습니다!')) return Colors.green[300]!;
     if (l.contains('패배') || l.contains('쓰러졌습니다...')) return Colors.red[300]!;
     if (l.contains(widget.me.name) && l.contains('→')) return Colors.blue[300]!;
-    if (l.contains(widget.opponent.name) && l.contains('→')) return Colors.orange[300]!;
+    if (l.contains(widget.opponent.name) && l.contains('→'))
+      return Colors.orange[300]!;
     if (l.contains('크리티컬') || l.contains('💥')) return Colors.yellow[300]!;
     if (l.contains('회피')) return Colors.grey[400]!;
     if (l.contains('스킬') || l.contains('【')) return Colors.purple[300]!;
@@ -1302,38 +1648,76 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: isWin
-            ? [Colors.green.withOpacity(0.3), Colors.green.withOpacity(0.1)]
-            : [Colors.red.withOpacity(0.3), Colors.red.withOpacity(0.1)]),
-      ),
-      child: Row(children: [
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(isWin ? '🏆 승리!' : '💀 패배...',
-              style: TextStyle(color: isWin ? Colors.green[300] : Colors.red[300], fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 2),
-            Row(children: [
-              Text(isWin ? '전리품: +${formatGold(widget.result.goldEarned)}' : '전리품 없음',
-                style: TextStyle(color: isWin ? Colors.amber : Colors.white54, fontSize: 14)),
-              if (isWin && widget.stoneReward > 0) ...[
-                const SizedBox(width: 8),
-                Image.asset('assets/images/home/header/enhance_mythic.png', width: 16, height: 16),
-                const SizedBox(width: 3),
-                Text('+${widget.stoneReward}', style: const TextStyle(color: Colors.purple, fontSize: 14, fontWeight: FontWeight.bold)),
-              ],
-            ]),
-          ],
-        )),
-        ElevatedButton(
-          onPressed: () { SoundService().playMainBgm(); Navigator.pop(context); },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isWin ? Colors.green : Colors.grey[700],
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-          child: const Text('확인', style: TextStyle(color: Colors.white)),
+        gradient: LinearGradient(
+          colors: isWin
+              ? [Colors.green.withOpacity(0.3), Colors.green.withOpacity(0.1)]
+              : [Colors.red.withOpacity(0.3), Colors.red.withOpacity(0.1)],
         ),
-      ]),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isWin ? '🏆 승리!' : '💀 패배...',
+                  style: TextStyle(
+                    color: isWin ? Colors.green[300] : Colors.red[300],
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    if (widget.showLootReward)
+                      Text(
+                        isWin
+                            ? '전리품: +${formatGold(widget.result.goldEarned)}'
+                            : '전리품 없음',
+                        style: TextStyle(
+                          color: isWin ? Colors.amber : Colors.white54,
+                          fontSize: 14,
+                        ),
+                      ),
+                    if (widget.showLootReward &&
+                        isWin &&
+                        widget.stoneReward > 0) ...[
+                      const SizedBox(width: 8),
+                      Image.asset(
+                        'assets/images/home/header/enhance_mythic.png',
+                        width: 16,
+                        height: 16,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '+${widget.stoneReward}',
+                        style: const TextStyle(
+                          color: Colors.purple,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              SoundService().playMainBgm();
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isWin ? Colors.green : Colors.grey[700],
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text('확인', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1343,117 +1727,3 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 // =====================================================
 
 // ── 배경 파티클 ──
-class _BgParticlePainter extends CustomPainter {
-  final List<_BgParticle> particles;
-  final double progress;
-  _BgParticlePainter({required this.particles, required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final p in particles) {
-      final y = (p.y + progress * p.speed) % 1.0;
-      final x = p.x + sin(y * pi * 2 + p.speed) * 0.02;
-      final twinkle = (0.5 + sin(progress * pi * 2 + p.x * 10) * 0.5).clamp(0.0, 1.0);
-      canvas.drawCircle(
-        Offset(x * size.width, (1 - y) * size.height),
-        p.size,
-        Paint()
-          ..color = Colors.white.withOpacity(p.opacity * twinkle)
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, p.size),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _BgParticlePainter old) => true;
-}
-
-// ── 임팩트 파티클 ──
-class _ImpactPainter extends CustomPainter {
-  final List<_ImpactParticle> particles;
-  final double progress;
-  _ImpactPainter({required this.particles, required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    for (final p in particles) {
-      final dist = p.speed * progress;
-      final x = cx + cos(p.angle) * dist;
-      final y = cy + sin(p.angle) * dist;
-      final fade = (1.0 - progress).clamp(0.0, 1.0);
-      final s = p.size * (1.0 - progress * 0.5);
-
-      canvas.drawCircle(
-        Offset(x, y), s.clamp(0.5, 10.0),
-        Paint()
-          ..color = p.color.withOpacity(fade)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ImpactPainter old) => old.progress != progress;
-}
-
-// ── 컨페티 ──
-class _ConfettiPainter extends CustomPainter {
-  final List<_ConfettiPiece> pieces;
-  final double progress;
-  _ConfettiPainter({required this.pieces, required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final p in pieces) {
-      final y = -20 + (size.height + 40) * progress * p.speed;
-      final x = p.x * size.width + sin(progress * pi * 4 + p.wobble) * p.wobble;
-      final rot = p.rotation + progress * pi * 6;
-      final fade = progress < 0.8 ? 1.0 : (1.0 - (progress - 0.8) / 0.2);
-
-      canvas.save();
-      canvas.translate(x, y);
-      canvas.rotate(rot);
-      canvas.drawRect(
-        Rect.fromCenter(center: Offset.zero, width: p.size, height: p.size * 0.5),
-        Paint()..color = p.color.withOpacity(fade.clamp(0.0, 1.0)),
-      );
-      canvas.restore();
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ConfettiPainter old) => old.progress != progress;
-}
-
-// ── 슬래시 폴백 (이미지 없을 때) ──
-class _FallbackSlashPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-  _FallbackSlashPainter({required this.progress, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color.withOpacity((1.0 - progress).clamp(0.0, 1.0))
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-
-    final path = Path();
-    path.moveTo(size.width * 0.8, size.height * 0.1);
-    path.quadraticBezierTo(size.width * 0.5, size.height * 0.5, size.width * 0.2, size.height * 0.9);
-    canvas.drawPath(path, paint);
-
-    // 글로우 복제
-    paint.strokeWidth = 8;
-    paint.color = color.withOpacity((0.3 * (1.0 - progress)).clamp(0.0, 1.0));
-    paint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _FallbackSlashPainter old) => old.progress != progress;
-}

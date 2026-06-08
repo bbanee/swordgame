@@ -175,7 +175,8 @@ service cloud.firestore {
     }
 
     match /users_appintos/{odId} {
-      allow read, write: if false;
+      allow read: if isSignedIn(); // Flutter 앱에서 합산 랭킹 조회 허용
+      allow write: if false;
     }
 
     match /{document=**} {

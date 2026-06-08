@@ -1,0 +1,3235 @@
+{
+  "version": 1,
+  "swords": [
+    {
+      "id": "normal_0",
+      "name": "낡은 검",
+      "grade": "normal",
+      "element": "fire",
+      "baseAtk": 81,
+      "skills": [
+        {
+          "name": "베기",
+          "multiplier": 1.310415,
+          "procRate": 32,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "fire"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 27,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "normal_1",
+      "name": "철검",
+      "grade": "normal",
+      "element": "water",
+      "baseAtk": 77,
+      "skills": [
+        {
+          "name": "찌르기",
+          "multiplier": 1.272099,
+          "procRate": 32,
+          "type": "pierce",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "water"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 27,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "normal_2",
+      "name": "청동검",
+      "grade": "normal",
+      "element": "nature",
+      "baseAtk": 81,
+      "skills": [
+        {
+          "name": "휘두르기",
+          "multiplier": 1.266057,
+          "procRate": 30,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "nature"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 25,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "normal_3",
+      "name": "강철검",
+      "grade": "normal",
+      "element": "light",
+      "baseAtk": 76,
+      "skills": [
+        {
+          "name": "내려치기",
+          "multiplier": 1.267261,
+          "procRate": 34,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "light"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 29,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "normal_4",
+      "name": "연습용 검",
+      "grade": "normal",
+      "element": "dark",
+      "baseAtk": 78,
+      "skills": [
+        {
+          "name": "올려베기",
+          "multiplier": 1.307412,
+          "procRate": 32,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "dark"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 27,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "normal_5",
+      "name": "나무검",
+      "grade": "normal",
+      "element": "fire",
+      "baseAtk": 73,
+      "skills": [
+        {
+          "name": "베기",
+          "multiplier": 1.284519,
+          "procRate": 34,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "fire"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 29,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "normal_6",
+      "name": "돌검",
+      "grade": "normal",
+      "element": "water",
+      "baseAtk": 81,
+      "skills": [
+        {
+          "name": "찌르기",
+          "multiplier": 1.261933,
+          "procRate": 33,
+          "type": "pierce",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "water"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 28,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "normal_7",
+      "name": "구리검",
+      "grade": "normal",
+      "element": "nature",
+      "baseAtk": 74,
+      "skills": [
+        {
+          "name": "휘두르기",
+          "multiplier": 1.339321,
+          "procRate": 33,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "nature"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 28,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "normal_8",
+      "name": "주석검",
+      "grade": "normal",
+      "element": "light",
+      "baseAtk": 82,
+      "skills": [
+        {
+          "name": "내려치기",
+          "multiplier": 1.292857,
+          "procRate": 33,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "light"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 28,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "normal_9",
+      "name": "녹슨 검",
+      "grade": "normal",
+      "element": "dark",
+      "baseAtk": 82,
+      "skills": [
+        {
+          "name": "올려베기",
+          "multiplier": 1.328093,
+          "procRate": 30,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "dark"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 25,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "normal_10",
+      "name": "훈련검",
+      "grade": "normal",
+      "element": "fire",
+      "baseAtk": 77,
+      "skills": [
+        {
+          "name": "베기",
+          "multiplier": 1.269538,
+          "procRate": 32,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "fire"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 27,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "normal_11",
+      "name": "초보자의 검",
+      "grade": "normal",
+      "element": "water",
+      "baseAtk": 82,
+      "skills": [
+        {
+          "name": "찌르기",
+          "multiplier": 1.285809,
+          "procRate": 33,
+          "type": "pierce",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "water"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 28,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "normal_12",
+      "name": "병사의 검",
+      "grade": "normal",
+      "element": "nature",
+      "baseAtk": 74,
+      "skills": [
+        {
+          "name": "휘두르기",
+          "multiplier": 1.300428,
+          "procRate": 34,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "nature"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 29,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "normal_13",
+      "name": "수련검",
+      "grade": "normal",
+      "element": "light",
+      "baseAtk": 80,
+      "skills": [
+        {
+          "name": "내려치기",
+          "multiplier": 1.261767,
+          "procRate": 34,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "light"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 29,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "normal_14",
+      "name": "단검",
+      "grade": "normal",
+      "element": "dark",
+      "baseAtk": 76,
+      "skills": [
+        {
+          "name": "올려베기",
+          "multiplier": 1.311634,
+          "procRate": 31,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "dark"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 26,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "normal_15",
+      "name": "장검",
+      "grade": "normal",
+      "element": "fire",
+      "baseAtk": 73,
+      "skills": [
+        {
+          "name": "베기",
+          "multiplier": 1.278334,
+          "procRate": 30,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "fire"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 25,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "normal_16",
+      "name": "활검",
+      "grade": "normal",
+      "element": "water",
+      "baseAtk": 77,
+      "skills": [
+        {
+          "name": "찌르기",
+          "multiplier": 1.340981,
+          "procRate": 31,
+          "type": "pierce",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "water"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 26,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "normal_17",
+      "name": "곡검",
+      "grade": "normal",
+      "element": "nature",
+      "baseAtk": 73,
+      "skills": [
+        {
+          "name": "휘두르기",
+          "multiplier": 1.296229,
+          "procRate": 31,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "nature"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 26,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "normal_18",
+      "name": "직검",
+      "grade": "normal",
+      "element": "light",
+      "baseAtk": 80,
+      "skills": [
+        {
+          "name": "내려치기",
+          "multiplier": 1.31746,
+          "procRate": 34,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "light"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 29,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "normal_19",
+      "name": "양날검",
+      "grade": "normal",
+      "element": "dark",
+      "baseAtk": 76,
+      "skills": [
+        {
+          "name": "올려베기",
+          "multiplier": 1.277931,
+          "procRate": 33,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "dark"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 28,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "normal_20",
+      "name": "외날검",
+      "grade": "normal",
+      "element": "fire",
+      "baseAtk": 81,
+      "skills": [
+        {
+          "name": "베기",
+          "multiplier": 1.293783,
+          "procRate": 32,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "fire"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 27,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "normal_21",
+      "name": "무딘 검",
+      "grade": "normal",
+      "element": "water",
+      "baseAtk": 74,
+      "skills": [
+        {
+          "name": "찌르기",
+          "multiplier": 1.267448,
+          "procRate": 31,
+          "type": "pierce",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "water"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 26,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "normal_22",
+      "name": "날카로운 검",
+      "grade": "normal",
+      "element": "nature",
+      "baseAtk": 75,
+      "skills": [
+        {
+          "name": "휘두르기",
+          "multiplier": 1.299984,
+          "procRate": 32,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "nature"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 27,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "normal_23",
+      "name": "가벼운 검",
+      "grade": "normal",
+      "element": "light",
+      "baseAtk": 80,
+      "skills": [
+        {
+          "name": "내려치기",
+          "multiplier": 1.317525,
+          "procRate": 30,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "light"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 25,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "normal_24",
+      "name": "무거운 검",
+      "grade": "normal",
+      "element": "dark",
+      "baseAtk": 78,
+      "skills": [
+        {
+          "name": "올려베기",
+          "multiplier": 1.266536,
+          "procRate": 31,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "dark"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 26,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "normal_25",
+      "name": "균형잡힌 검",
+      "grade": "normal",
+      "element": "fire",
+      "baseAtk": 77,
+      "skills": [
+        {
+          "name": "베기",
+          "multiplier": 1.251968,
+          "procRate": 30,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "fire"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 25,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "normal_26",
+      "name": "견습생의 검",
+      "grade": "normal",
+      "element": "water",
+      "baseAtk": 74,
+      "skills": [
+        {
+          "name": "찌르기",
+          "multiplier": 1.338322,
+          "procRate": 33,
+          "type": "pierce",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "water"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 28,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "normal_27",
+      "name": "모험가의 검",
+      "grade": "normal",
+      "element": "nature",
+      "baseAtk": 81,
+      "skills": [
+        {
+          "name": "휘두르기",
+          "multiplier": 1.316331,
+          "procRate": 33,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "nature"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 28,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "normal_28",
+      "name": "탐험가의 검",
+      "grade": "normal",
+      "element": "light",
+      "baseAtk": 80,
+      "skills": [
+        {
+          "name": "내려치기",
+          "multiplier": 1.293625,
+          "procRate": 32,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "light"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 27,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "normal_29",
+      "name": "사냥꾼의 검",
+      "grade": "normal",
+      "element": "dark",
+      "baseAtk": 73,
+      "skills": [
+        {
+          "name": "올려베기",
+          "multiplier": 1.275689,
+          "procRate": 33,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "dark"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 28,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "normal_30",
+      "name": "전사의 검",
+      "grade": "normal",
+      "element": "fire",
+      "baseAtk": 79,
+      "skills": [
+        {
+          "name": "베기",
+          "multiplier": 1.286351,
+          "procRate": 33,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "fire"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 28,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "normal_31",
+      "name": "기사의 검",
+      "grade": "normal",
+      "element": "water",
+      "baseAtk": 74,
+      "skills": [
+        {
+          "name": "찌르기",
+          "multiplier": 1.289856,
+          "procRate": 34,
+          "type": "pierce",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "water"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 29,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "normal_32",
+      "name": "용병의 검",
+      "grade": "normal",
+      "element": "nature",
+      "baseAtk": 81,
+      "skills": [
+        {
+          "name": "휘두르기",
+          "multiplier": 1.309541,
+          "procRate": 33,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "nature"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 28,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "normal_33",
+      "name": "경비병의 검",
+      "grade": "normal",
+      "element": "light",
+      "baseAtk": 80,
+      "skills": [
+        {
+          "name": "내려치기",
+          "multiplier": 1.288687,
+          "procRate": 33,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "light"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 28,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "normal_34",
+      "name": "순찰자의 검",
+      "grade": "normal",
+      "element": "dark",
+      "baseAtk": 81,
+      "skills": [
+        {
+          "name": "올려베기",
+          "multiplier": 1.288996,
+          "procRate": 34,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "dark"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 29,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "normal_35",
+      "name": "수호자의 검",
+      "grade": "normal",
+      "element": "fire",
+      "baseAtk": 73,
+      "skills": [
+        {
+          "name": "베기",
+          "multiplier": 1.251342,
+          "procRate": 30,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "fire"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 25,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "normal_36",
+      "name": "파수꾼의 검",
+      "grade": "normal",
+      "element": "water",
+      "baseAtk": 80,
+      "skills": [
+        {
+          "name": "찌르기",
+          "multiplier": 1.285622,
+          "procRate": 32,
+          "type": "pierce",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 1,
+          "element": "water"
+        },
+        {
+          "name": "찌르기",
+          "multiplier": 1.125,
+          "procRate": 27,
+          "type": "pierce",
+          "effect": "bleed",
+          "value": 10,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "rare_0",
+      "name": "미스릴 검",
+      "grade": "rare",
+      "element": "fire",
+      "baseAtk": 100,
+      "skills": [
+        {
+          "name": "강타",
+          "multiplier": 1.389944,
+          "procRate": 36,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "연속 베기",
+          "multiplier": 1.298054,
+          "procRate": 31,
+          "type": "slash",
+          "effect": "bleed",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "rare_1",
+      "name": "오리할콘 검",
+      "grade": "rare",
+      "element": "water",
+      "baseAtk": 95,
+      "skills": [
+        {
+          "name": "관통 찌르기",
+          "multiplier": 1.358583,
+          "procRate": 37,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "급소 공격",
+          "multiplier": 1.27613,
+          "procRate": 33,
+          "type": "pierce",
+          "effect": "critBoost",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "rare_2",
+      "name": "아다만트 검",
+      "grade": "rare",
+      "element": "nature",
+      "baseAtk": 97,
+      "skills": [
+        {
+          "name": "화염 베기",
+          "multiplier": 1.337794,
+          "procRate": 37,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "폭발 일격",
+          "multiplier": 1.293599,
+          "procRate": 31,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "rare_3",
+      "name": "마법검",
+      "grade": "rare",
+      "element": "light",
+      "baseAtk": 93,
+      "skills": [
+        {
+          "name": "흡혈 일격",
+          "multiplier": 1.370153,
+          "procRate": 36,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "생명 흡수",
+          "multiplier": 1.255167,
+          "procRate": 33,
+          "type": "drain",
+          "effect": "heal",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "rare_4",
+      "name": "정령검",
+      "grade": "rare",
+      "element": "dark",
+      "baseAtk": 100,
+      "skills": [
+        {
+          "name": "수호의 일격",
+          "multiplier": 1.331749,
+          "procRate": 37,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "방어 태세",
+          "multiplier": 1.278996,
+          "procRate": 33,
+          "type": "guard",
+          "effect": "shield",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "rare_5",
+      "name": "축복받은 검",
+      "grade": "rare",
+      "element": "fire",
+      "baseAtk": 93,
+      "skills": [
+        {
+          "name": "강타",
+          "multiplier": 1.354044,
+          "procRate": 38,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "연속 베기",
+          "multiplier": 1.294145,
+          "procRate": 33,
+          "type": "slash",
+          "effect": "bleed",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "rare_6",
+      "name": "저주받은 검",
+      "grade": "rare",
+      "element": "water",
+      "baseAtk": 95,
+      "skills": [
+        {
+          "name": "관통 찌르기",
+          "multiplier": 1.325961,
+          "procRate": 35,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "급소 공격",
+          "multiplier": 1.277877,
+          "procRate": 31,
+          "type": "pierce",
+          "effect": "critBoost",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "rare_7",
+      "name": "불꽃검",
+      "grade": "rare",
+      "element": "nature",
+      "baseAtk": 99,
+      "skills": [
+        {
+          "name": "화염 베기",
+          "multiplier": 1.36445,
+          "procRate": 35,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "폭발 일격",
+          "multiplier": 1.255723,
+          "procRate": 31,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "rare_8",
+      "name": "얼음검",
+      "grade": "rare",
+      "element": "light",
+      "baseAtk": 99,
+      "skills": [
+        {
+          "name": "흡혈 일격",
+          "multiplier": 1.322241,
+          "procRate": 34,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "생명 흡수",
+          "multiplier": 1.30218,
+          "procRate": 32,
+          "type": "drain",
+          "effect": "heal",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "rare_9",
+      "name": "번개검",
+      "grade": "rare",
+      "element": "dark",
+      "baseAtk": 98,
+      "skills": [
+        {
+          "name": "수호의 일격",
+          "multiplier": 1.393813,
+          "procRate": 37,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "방어 태세",
+          "multiplier": 1.29281,
+          "procRate": 32,
+          "type": "guard",
+          "effect": "shield",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "rare_10",
+      "name": "독검",
+      "grade": "rare",
+      "element": "fire",
+      "baseAtk": 98,
+      "skills": [
+        {
+          "name": "강타",
+          "multiplier": 1.393263,
+          "procRate": 38,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "연속 베기",
+          "multiplier": 1.292087,
+          "procRate": 32,
+          "type": "slash",
+          "effect": "bleed",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "rare_11",
+      "name": "치유검",
+      "grade": "rare",
+      "element": "water",
+      "baseAtk": 96,
+      "skills": [
+        {
+          "name": "관통 찌르기",
+          "multiplier": 1.37084,
+          "procRate": 38,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "급소 공격",
+          "multiplier": 1.26513,
+          "procRate": 34,
+          "type": "pierce",
+          "effect": "critBoost",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "rare_12",
+      "name": "흡혈검",
+      "grade": "rare",
+      "element": "nature",
+      "baseAtk": 93,
+      "skills": [
+        {
+          "name": "화염 베기",
+          "multiplier": 1.341343,
+          "procRate": 36,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "폭발 일격",
+          "multiplier": 1.261217,
+          "procRate": 33,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "rare_13",
+      "name": "파괴검",
+      "grade": "rare",
+      "element": "light",
+      "baseAtk": 100,
+      "skills": [
+        {
+          "name": "흡혈 일격",
+          "multiplier": 1.353013,
+          "procRate": 35,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "생명 흡수",
+          "multiplier": 1.278718,
+          "procRate": 34,
+          "type": "drain",
+          "effect": "heal",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "rare_14",
+      "name": "수호검",
+      "grade": "rare",
+      "element": "dark",
+      "baseAtk": 97,
+      "skills": [
+        {
+          "name": "수호의 일격",
+          "multiplier": 1.367187,
+          "procRate": 37,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "방어 태세",
+          "multiplier": 1.273422,
+          "procRate": 31,
+          "type": "guard",
+          "effect": "shield",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "rare_15",
+      "name": "심판검",
+      "grade": "rare",
+      "element": "fire",
+      "baseAtk": 98,
+      "skills": [
+        {
+          "name": "강타",
+          "multiplier": 1.377669,
+          "procRate": 35,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "연속 베기",
+          "multiplier": 1.269576,
+          "procRate": 34,
+          "type": "slash",
+          "effect": "bleed",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "rare_16",
+      "name": "복수검",
+      "grade": "rare",
+      "element": "water",
+      "baseAtk": 91,
+      "skills": [
+        {
+          "name": "관통 찌르기",
+          "multiplier": 1.355522,
+          "procRate": 36,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "급소 공격",
+          "multiplier": 1.30238,
+          "procRate": 31,
+          "type": "pierce",
+          "effect": "critBoost",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "rare_17",
+      "name": "구원검",
+      "grade": "rare",
+      "element": "nature",
+      "baseAtk": 97,
+      "skills": [
+        {
+          "name": "화염 베기",
+          "multiplier": 1.331209,
+          "procRate": 37,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "폭발 일격",
+          "multiplier": 1.302172,
+          "procRate": 32,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "rare_18",
+      "name": "정의검",
+      "grade": "rare",
+      "element": "light",
+      "baseAtk": 95,
+      "skills": [
+        {
+          "name": "흡혈 일격",
+          "multiplier": 1.3761,
+          "procRate": 34,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "생명 흡수",
+          "multiplier": 1.283746,
+          "procRate": 31,
+          "type": "drain",
+          "effect": "heal",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "rare_19",
+      "name": "자비검",
+      "grade": "rare",
+      "element": "dark",
+      "baseAtk": 98,
+      "skills": [
+        {
+          "name": "수호의 일격",
+          "multiplier": 1.391156,
+          "procRate": 35,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "방어 태세",
+          "multiplier": 1.30377,
+          "procRate": 31,
+          "type": "guard",
+          "effect": "shield",
+          "value": 12,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "unique_0",
+      "name": "용의 검",
+      "grade": "unique",
+      "element": "fire",
+      "baseAtk": 115,
+      "skills": [
+        {
+          "name": "용의 일격",
+          "multiplier": 1.494718,
+          "procRate": 42,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "불의 숨결",
+          "multiplier": 1.464165,
+          "procRate": 37,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "unique_1",
+      "name": "불사조의 검",
+      "grade": "unique",
+      "element": "water",
+      "baseAtk": 116,
+      "skills": [
+        {
+          "name": "불사의 베기",
+          "multiplier": 1.503091,
+          "procRate": 39,
+          "type": "slash",
+          "effect": "lifesteal",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "재생의 불꽃",
+          "multiplier": 1.443192,
+          "procRate": 37,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "unique_2",
+      "name": "유니콘의 검",
+      "grade": "unique",
+      "element": "nature",
+      "baseAtk": 118,
+      "skills": [
+        {
+          "name": "신성한 돌진",
+          "multiplier": 1.502075,
+          "procRate": 39,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "정화의 빛",
+          "multiplier": 1.450797,
+          "procRate": 36,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "unique_3",
+      "name": "그리폰의 검",
+      "grade": "unique",
+      "element": "light",
+      "baseAtk": 118,
+      "skills": [
+        {
+          "name": "맹수의 발톱",
+          "multiplier": 1.524331,
+          "procRate": 41,
+          "type": "slash",
+          "effect": "bleed",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "사나운 포효",
+          "multiplier": 1.47019,
+          "procRate": 37,
+          "type": "blast",
+          "effect": "stun",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "unique_4",
+      "name": "키메라의 검",
+      "grade": "unique",
+      "element": "dark",
+      "baseAtk": 113,
+      "skills": [
+        {
+          "name": "혼돈의 일격",
+          "multiplier": 1.518989,
+          "procRate": 42,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "변이의 독",
+          "multiplier": 1.443252,
+          "procRate": 39,
+          "type": "drain",
+          "effect": "bleed",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "unique_5",
+      "name": "히드라의 검",
+      "grade": "unique",
+      "element": "fire",
+      "baseAtk": 116,
+      "skills": [
+        {
+          "name": "용의 일격",
+          "multiplier": 1.551674,
+          "procRate": 41,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "불의 숨결",
+          "multiplier": 1.441247,
+          "procRate": 35,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "unique_6",
+      "name": "세르베로스의 검",
+      "grade": "unique",
+      "element": "water",
+      "baseAtk": 113,
+      "skills": [
+        {
+          "name": "불사의 베기",
+          "multiplier": 1.535659,
+          "procRate": 41,
+          "type": "slash",
+          "effect": "lifesteal",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "재생의 불꽃",
+          "multiplier": 1.479151,
+          "procRate": 37,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "unique_7",
+      "name": "페가수스의 검",
+      "grade": "unique",
+      "element": "nature",
+      "baseAtk": 122,
+      "skills": [
+        {
+          "name": "신성한 돌진",
+          "multiplier": 1.487486,
+          "procRate": 41,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "정화의 빛",
+          "multiplier": 1.434631,
+          "procRate": 38,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "unique_8",
+      "name": "미노타우로스의 검",
+      "grade": "unique",
+      "element": "light",
+      "baseAtk": 114,
+      "skills": [
+        {
+          "name": "맹수의 발톱",
+          "multiplier": 1.513551,
+          "procRate": 40,
+          "type": "slash",
+          "effect": "bleed",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "사나운 포효",
+          "multiplier": 1.469779,
+          "procRate": 35,
+          "type": "blast",
+          "effect": "stun",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "unique_9",
+      "name": "메두사의 검",
+      "grade": "unique",
+      "element": "dark",
+      "baseAtk": 115,
+      "skills": [
+        {
+          "name": "혼돈의 일격",
+          "multiplier": 1.541112,
+          "procRate": 42,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "변이의 독",
+          "multiplier": 1.444795,
+          "procRate": 37,
+          "type": "drain",
+          "effect": "bleed",
+          "value": 14,
+          "cooldownTurns": 2,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "legend_0",
+      "name": "엑스칼리버",
+      "grade": "legend",
+      "element": "fire",
+      "baseAtk": 149,
+      "skills": [
+        {
+          "name": "왕의 일격",
+          "multiplier": 1.688124,
+          "procRate": 45,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "성스러운 빛",
+          "multiplier": 1.614364,
+          "procRate": 44,
+          "type": "guard",
+          "effect": "lifesteal",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "천벌",
+          "multiplier": 1.562664,
+          "procRate": 8,
+          "type": "blast",
+          "effect": "stun",
+          "value": 16,
+          "cooldownTurns": 5,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "legend_1",
+      "name": "듀란달",
+      "grade": "legend",
+      "element": "water",
+      "baseAtk": 145,
+      "skills": [
+        {
+          "name": "영웅의 베기",
+          "multiplier": 1.620701,
+          "procRate": 46,
+          "type": "slash",
+          "effect": "pierce",
+          "value": 23,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "불굴의 의지",
+          "multiplier": 1.608888,
+          "procRate": 46,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "최후의 일격",
+          "multiplier": 1.522285,
+          "procRate": 44,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 16,
+          "cooldownTurns": 3,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "legend_2",
+      "name": "그람",
+      "grade": "legend",
+      "element": "nature",
+      "baseAtk": 147,
+      "skills": [
+        {
+          "name": "마검 각성",
+          "multiplier": 1.620206,
+          "procRate": 47,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 23,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "저주의 파동",
+          "multiplier": 1.595688,
+          "procRate": 46,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "암흑 관통",
+          "multiplier": 1.503319,
+          "procRate": 43,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 16,
+          "cooldownTurns": 3,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "legend_3",
+      "name": "발뭉",
+      "grade": "legend",
+      "element": "light",
+      "baseAtk": 143,
+      "skills": [
+        {
+          "name": "용의 분노",
+          "multiplier": 1.671768,
+          "procRate": 49,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "비늘 방패",
+          "multiplier": 1.558913,
+          "procRate": 46,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "화염 폭풍",
+          "multiplier": 1.530828,
+          "procRate": 42,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 16,
+          "cooldownTurns": 3,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "legend_4",
+      "name": "커틀라스",
+      "grade": "legend",
+      "element": "dark",
+      "baseAtk": 149,
+      "skills": [
+        {
+          "name": "천지개벽",
+          "multiplier": 1.640381,
+          "procRate": 49,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "만물귀일",
+          "multiplier": 1.56806,
+          "procRate": 43,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "음양조화",
+          "multiplier": 1.575832,
+          "procRate": 8,
+          "type": "guard",
+          "effect": "stun",
+          "value": 16,
+          "cooldownTurns": 5,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "legend_5",
+      "name": "무라마사",
+      "grade": "legend",
+      "element": "fire",
+      "baseAtk": 145,
+      "skills": [
+        {
+          "name": "왕의 일격",
+          "multiplier": 1.670823,
+          "procRate": 45,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "성스러운 빛",
+          "multiplier": 1.575732,
+          "procRate": 43,
+          "type": "guard",
+          "effect": "lifesteal",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "천벌",
+          "multiplier": 1.561042,
+          "procRate": 7,
+          "type": "blast",
+          "effect": "stun",
+          "value": 16,
+          "cooldownTurns": 5,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "legend_6",
+      "name": "마사무네",
+      "grade": "legend",
+      "element": "water",
+      "baseAtk": 146,
+      "skills": [
+        {
+          "name": "영웅의 베기",
+          "multiplier": 1.666885,
+          "procRate": 48,
+          "type": "slash",
+          "effect": "pierce",
+          "value": 23,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "불굴의 의지",
+          "multiplier": 1.557165,
+          "procRate": 47,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "최후의 일격",
+          "multiplier": 1.546858,
+          "procRate": 45,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 16,
+          "cooldownTurns": 3,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "legend_7",
+      "name": "쿠사나기",
+      "grade": "legend",
+      "element": "nature",
+      "baseAtk": 144,
+      "skills": [
+        {
+          "name": "마검 각성",
+          "multiplier": 1.663683,
+          "procRate": 49,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 23,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "저주의 파동",
+          "multiplier": 1.622321,
+          "procRate": 45,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "암흑 관통",
+          "multiplier": 1.521299,
+          "procRate": 43,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 16,
+          "cooldownTurns": 3,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "legend_8",
+      "name": "아메노무라쿠모",
+      "grade": "legend",
+      "element": "light",
+      "baseAtk": 148,
+      "skills": [
+        {
+          "name": "용의 분노",
+          "multiplier": 1.691605,
+          "procRate": 47,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "비늘 방패",
+          "multiplier": 1.624212,
+          "procRate": 46,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "화염 폭풍",
+          "multiplier": 1.543854,
+          "procRate": 41,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 16,
+          "cooldownTurns": 3,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "legend_9",
+      "name": "토츠카",
+      "grade": "legend",
+      "element": "dark",
+      "baseAtk": 148,
+      "skills": [
+        {
+          "name": "천지개벽",
+          "multiplier": 1.639236,
+          "procRate": 49,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "만물귀일",
+          "multiplier": 1.612117,
+          "procRate": 47,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "음양조화",
+          "multiplier": 1.532722,
+          "procRate": 8,
+          "type": "guard",
+          "effect": "stun",
+          "value": 16,
+          "cooldownTurns": 5,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "legend_10",
+      "name": "천총운검",
+      "grade": "legend",
+      "element": "fire",
+      "baseAtk": 151,
+      "skills": [
+        {
+          "name": "왕의 일격",
+          "multiplier": 1.694764,
+          "procRate": 48,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "성스러운 빛",
+          "multiplier": 1.555333,
+          "procRate": 45,
+          "type": "guard",
+          "effect": "lifesteal",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "천벌",
+          "multiplier": 1.556695,
+          "procRate": 9,
+          "type": "blast",
+          "effect": "stun",
+          "value": 16,
+          "cooldownTurns": 5,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "legend_11",
+      "name": "용천검",
+      "grade": "legend",
+      "element": "water",
+      "baseAtk": 143,
+      "skills": [
+        {
+          "name": "영웅의 베기",
+          "multiplier": 1.688861,
+          "procRate": 45,
+          "type": "slash",
+          "effect": "pierce",
+          "value": 23,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "불굴의 의지",
+          "multiplier": 1.608933,
+          "procRate": 45,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "최후의 일격",
+          "multiplier": 1.528548,
+          "procRate": 45,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 16,
+          "cooldownTurns": 3,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "legend_12",
+      "name": "간장막야",
+      "grade": "legend",
+      "element": "nature",
+      "baseAtk": 150,
+      "skills": [
+        {
+          "name": "마검 각성",
+          "multiplier": 1.65139,
+          "procRate": 49,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 23,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "저주의 파동",
+          "multiplier": 1.622635,
+          "procRate": 43,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "암흑 관통",
+          "multiplier": 1.54838,
+          "procRate": 43,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 16,
+          "cooldownTurns": 3,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "legend_13",
+      "name": "태아",
+      "grade": "legend",
+      "element": "light",
+      "baseAtk": 152,
+      "skills": [
+        {
+          "name": "용의 분노",
+          "multiplier": 1.64733,
+          "procRate": 45,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "비늘 방패",
+          "multiplier": 1.559476,
+          "procRate": 44,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "화염 폭풍",
+          "multiplier": 1.544933,
+          "procRate": 42,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 16,
+          "cooldownTurns": 3,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "legend_14",
+      "name": "의천검",
+      "grade": "legend",
+      "element": "dark",
+      "baseAtk": 149,
+      "skills": [
+        {
+          "name": "천지개벽",
+          "multiplier": 1.664247,
+          "procRate": 46,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "만물귀일",
+          "multiplier": 1.624844,
+          "procRate": 43,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "음양조화",
+          "multiplier": 1.561514,
+          "procRate": 8,
+          "type": "guard",
+          "effect": "stun",
+          "value": 16,
+          "cooldownTurns": 5,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "legend_15",
+      "name": "칠성검",
+      "grade": "legend",
+      "element": "fire",
+      "baseAtk": 152,
+      "skills": [
+        {
+          "name": "왕의 일격",
+          "multiplier": 1.652697,
+          "procRate": 45,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "성스러운 빛",
+          "multiplier": 1.578251,
+          "procRate": 46,
+          "type": "guard",
+          "effect": "lifesteal",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "천벌",
+          "multiplier": 1.548915,
+          "procRate": 9,
+          "type": "blast",
+          "effect": "stun",
+          "value": 16,
+          "cooldownTurns": 5,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "legend_16",
+      "name": "삼척검",
+      "grade": "legend",
+      "element": "water",
+      "baseAtk": 147,
+      "skills": [
+        {
+          "name": "영웅의 베기",
+          "multiplier": 1.633319,
+          "procRate": 46,
+          "type": "slash",
+          "effect": "pierce",
+          "value": 23,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "불굴의 의지",
+          "multiplier": 1.61422,
+          "procRate": 47,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "최후의 일격",
+          "multiplier": 1.51632,
+          "procRate": 44,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 16,
+          "cooldownTurns": 3,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "legend_17",
+      "name": "비수",
+      "grade": "legend",
+      "element": "nature",
+      "baseAtk": 146,
+      "skills": [
+        {
+          "name": "마검 각성",
+          "multiplier": 1.6984,
+          "procRate": 47,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 23,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "저주의 파동",
+          "multiplier": 1.570129,
+          "procRate": 45,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 18,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "암흑 관통",
+          "multiplier": 1.545752,
+          "procRate": 43,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 16,
+          "cooldownTurns": 3,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "hidden_0",
+      "name": "세계수의 검",
+      "grade": "hidden",
+      "element": "fire",
+      "baseAtk": 183,
+      "skills": [
+        {
+          "name": "세계수의 가호",
+          "multiplier": 1.760803,
+          "procRate": 52,
+          "type": "guard",
+          "effect": "lifesteal",
+          "value": 28,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "생명의 축복",
+          "multiplier": 1.701651,
+          "procRate": 50,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 24,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "자연의 분노",
+          "multiplier": 1.675318,
+          "procRate": 46,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 21,
+          "cooldownTurns": 3,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "hidden_1",
+      "name": "차원의 검",
+      "grade": "hidden",
+      "element": "water",
+      "baseAtk": 190,
+      "skills": [
+        {
+          "name": "차원 절단",
+          "multiplier": 1.732557,
+          "procRate": 53,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 28,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "공간 왜곡",
+          "multiplier": 1.692606,
+          "procRate": 12,
+          "type": "blast",
+          "effect": "stun",
+          "value": 24,
+          "cooldownTurns": 4,
+          "element": "water"
+        },
+        {
+          "name": "차원 흡수",
+          "multiplier": 1.645352,
+          "procRate": 50,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 21,
+          "cooldownTurns": 3,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "hidden_2",
+      "name": "시간의 검",
+      "grade": "hidden",
+      "element": "nature",
+      "baseAtk": 186,
+      "skills": [
+        {
+          "name": "시간 정지",
+          "multiplier": 1.785385,
+          "procRate": 10,
+          "type": "guard",
+          "effect": "stun",
+          "value": 28,
+          "cooldownTurns": 4,
+          "element": "nature"
+        },
+        {
+          "name": "시간 역행",
+          "multiplier": 1.680381,
+          "procRate": 51,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 24,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "시간 가속",
+          "multiplier": 1.671203,
+          "procRate": 49,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 3,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "hidden_3",
+      "name": "공간의 검",
+      "grade": "hidden",
+      "element": "light",
+      "baseAtk": 187,
+      "skills": [
+        {
+          "name": "공간 압축",
+          "multiplier": 1.742108,
+          "procRate": 54,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "텔레포트 슬래시",
+          "multiplier": 1.726949,
+          "procRate": 52,
+          "type": "slash",
+          "effect": "pierce",
+          "value": 24,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "차원 감옥",
+          "multiplier": 1.673049,
+          "procRate": 10,
+          "type": "guard",
+          "effect": "stun",
+          "value": 21,
+          "cooldownTurns": 4,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "hidden_4",
+      "name": "인과의 검",
+      "grade": "hidden",
+      "element": "dark",
+      "baseAtk": 188,
+      "skills": [
+        {
+          "name": "인과율 조작",
+          "multiplier": 1.747821,
+          "procRate": 53,
+          "type": "drain",
+          "effect": "pierce",
+          "value": 28,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "운명 변경",
+          "multiplier": 1.698193,
+          "procRate": 52,
+          "type": "guard",
+          "effect": "lifesteal",
+          "value": 24,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "필연의 일격",
+          "multiplier": 1.632791,
+          "procRate": 49,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 3,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "hidden_5",
+      "name": "운명의 톱니",
+      "grade": "hidden",
+      "element": "fire",
+      "baseAtk": 188,
+      "skills": [
+        {
+          "name": "세계수의 가호",
+          "multiplier": 1.737865,
+          "procRate": 53,
+          "type": "guard",
+          "effect": "lifesteal",
+          "value": 28,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "생명의 축복",
+          "multiplier": 1.684032,
+          "procRate": 52,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 24,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "자연의 분노",
+          "multiplier": 1.645446,
+          "procRate": 49,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 21,
+          "cooldownTurns": 3,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "hidden_6",
+      "name": "존재의 검",
+      "grade": "hidden",
+      "element": "water",
+      "baseAtk": 189,
+      "skills": [
+        {
+          "name": "차원 절단",
+          "multiplier": 1.778622,
+          "procRate": 50,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 28,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "공간 왜곡",
+          "multiplier": 1.723057,
+          "procRate": 10,
+          "type": "blast",
+          "effect": "stun",
+          "value": 24,
+          "cooldownTurns": 4,
+          "element": "water"
+        },
+        {
+          "name": "차원 흡수",
+          "multiplier": 1.675727,
+          "procRate": 48,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 21,
+          "cooldownTurns": 3,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "hidden_7",
+      "name": "허무의 검",
+      "grade": "hidden",
+      "element": "nature",
+      "baseAtk": 190,
+      "skills": [
+        {
+          "name": "시간 정지",
+          "multiplier": 1.724946,
+          "procRate": 10,
+          "type": "guard",
+          "effect": "stun",
+          "value": 28,
+          "cooldownTurns": 4,
+          "element": "nature"
+        },
+        {
+          "name": "시간 역행",
+          "multiplier": 1.717941,
+          "procRate": 49,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 24,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "시간 가속",
+          "multiplier": 1.60157,
+          "procRate": 46,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 3,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "hidden_8",
+      "name": "혼돈의 검",
+      "grade": "hidden",
+      "element": "light",
+      "baseAtk": 190,
+      "skills": [
+        {
+          "name": "공간 압축",
+          "multiplier": 1.793655,
+          "procRate": 50,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "텔레포트 슬래시",
+          "multiplier": 1.695051,
+          "procRate": 51,
+          "type": "slash",
+          "effect": "pierce",
+          "value": 24,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "차원 감옥",
+          "multiplier": 1.670042,
+          "procRate": 12,
+          "type": "guard",
+          "effect": "stun",
+          "value": 21,
+          "cooldownTurns": 4,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "hidden_9",
+      "name": "질서의 검",
+      "grade": "hidden",
+      "element": "dark",
+      "baseAtk": 186,
+      "skills": [
+        {
+          "name": "인과율 조작",
+          "multiplier": 1.736323,
+          "procRate": 50,
+          "type": "drain",
+          "effect": "pierce",
+          "value": 28,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "운명 변경",
+          "multiplier": 1.71147,
+          "procRate": 50,
+          "type": "guard",
+          "effect": "lifesteal",
+          "value": 24,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "필연의 일격",
+          "multiplier": 1.653928,
+          "procRate": 48,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 3,
+          "element": "dark"
+        }
+      ]
+    },
+    {
+      "id": "immortal_0",
+      "name": "태초의 검 - 창세",
+      "grade": "immortal",
+      "element": "fire",
+      "baseAtk": 240,
+      "skills": [
+        {
+          "name": "창세의 빛",
+          "multiplier": 1.900622,
+          "procRate": 60,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "만물 창조",
+          "multiplier": 1.856406,
+          "procRate": 56,
+          "type": "guard",
+          "effect": "lifesteal",
+          "value": 31,
+          "cooldownTurns": 2,
+          "element": "fire"
+        },
+        {
+          "name": "태초의 불꽃",
+          "multiplier": 1.762173,
+          "procRate": 56,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 27,
+          "cooldownTurns": 3,
+          "element": "fire"
+        }
+      ]
+    },
+    {
+      "id": "immortal_1",
+      "name": "종말의 검 - 멸세",
+      "grade": "immortal",
+      "element": "water",
+      "baseAtk": 241,
+      "skills": [
+        {
+          "name": "멸세의 일격",
+          "multiplier": 1.871823,
+          "procRate": 57,
+          "type": "slash",
+          "effect": "pierce",
+          "value": 34,
+          "cooldownTurns": 2,
+          "element": "water"
+        },
+        {
+          "name": "종말의 파동",
+          "multiplier": 1.825849,
+          "procRate": 15,
+          "type": "blast",
+          "effect": "stun",
+          "value": 31,
+          "cooldownTurns": 4,
+          "element": "water"
+        },
+        {
+          "name": "소멸의 어둠",
+          "multiplier": 1.76321,
+          "procRate": 55,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 27,
+          "cooldownTurns": 3,
+          "element": "water"
+        }
+      ]
+    },
+    {
+      "id": "immortal_2",
+      "name": "영원의 검 - 무한",
+      "grade": "immortal",
+      "element": "nature",
+      "baseAtk": 240,
+      "skills": [
+        {
+          "name": "무한의 베기",
+          "multiplier": 1.889112,
+          "procRate": 60,
+          "type": "slash",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "영원의 순환",
+          "multiplier": 1.853592,
+          "procRate": 55,
+          "type": "drain",
+          "effect": "lifesteal",
+          "value": 31,
+          "cooldownTurns": 2,
+          "element": "nature"
+        },
+        {
+          "name": "불멸의 의지",
+          "multiplier": 1.775882,
+          "procRate": 54,
+          "type": "guard",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 3,
+          "element": "nature"
+        }
+      ]
+    },
+    {
+      "id": "immortal_3",
+      "name": "절대의 검 - 초월",
+      "grade": "immortal",
+      "element": "light",
+      "baseAtk": 236,
+      "skills": [
+        {
+          "name": "초월의 경지",
+          "multiplier": 1.933495,
+          "procRate": 57,
+          "type": "pierce",
+          "effect": "pierce",
+          "value": 34,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "차원 붕괴",
+          "multiplier": 1.809848,
+          "procRate": 57,
+          "type": "blast",
+          "effect": "bleed",
+          "value": 31,
+          "cooldownTurns": 2,
+          "element": "light"
+        },
+        {
+          "name": "절대 방어",
+          "multiplier": 1.809621,
+          "procRate": 56,
+          "type": "guard",
+          "effect": "lifesteal",
+          "value": 27,
+          "cooldownTurns": 3,
+          "element": "light"
+        }
+      ]
+    },
+    {
+      "id": "immortal_4",
+      "name": "유일의 검 - 근원",
+      "grade": "immortal",
+      "element": "dark",
+      "baseAtk": 234,
+      "skills": [
+        {
+          "name": "근원의 힘",
+          "multiplier": 1.914983,
+          "procRate": 61,
+          "type": "blast",
+          "effect": "damage",
+          "value": 0,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "원초의 베기",
+          "multiplier": 1.837539,
+          "procRate": 55,
+          "type": "slash",
+          "effect": "pierce",
+          "value": 31,
+          "cooldownTurns": 2,
+          "element": "dark"
+        },
+        {
+          "name": "시작과 끝",
+          "multiplier": 1.765705,
+          "procRate": 15,
+          "type": "drain",
+          "effect": "stun",
+          "value": 27,
+          "cooldownTurns": 4,
+          "element": "dark"
+        }
+      ]
+    }
+  ]
+}

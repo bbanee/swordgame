@@ -7,11 +7,7 @@ class QuestCard extends StatelessWidget {
   final DailyQuest quest;
   final VoidCallback? onClaim;
 
-  const QuestCard({
-    super.key,
-    required this.quest,
-    this.onClaim,
-  });
+  const QuestCard({super.key, required this.quest, this.onClaim});
 
   @override
   Widget build(BuildContext context) {
@@ -24,15 +20,15 @@ class QuestCard extends StatelessWidget {
         color: isClaimed
             ? Colors.grey.withOpacity(0.1)
             : isCompleted
-                ? Colors.green.withOpacity(0.1)
-                : Colors.white.withOpacity(0.05),
+            ? Colors.green.withOpacity(0.1)
+            : Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isClaimed
               ? Colors.grey.withOpacity(0.2)
               : isCompleted
-                  ? Colors.green.withOpacity(0.5)
-                  : Colors.transparent,
+              ? Colors.green.withOpacity(0.5)
+              : Colors.transparent,
         ),
       ),
       child: Row(
@@ -46,20 +42,20 @@ class QuestCard extends StatelessWidget {
               color: isClaimed
                   ? Colors.grey.withOpacity(0.3)
                   : isCompleted
-                      ? Colors.green.withOpacity(0.3)
-                      : Colors.white.withOpacity(0.1),
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.white.withOpacity(0.1),
             ),
             child: Icon(
               isClaimed
                   ? Icons.check
                   : isCompleted
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
               color: isClaimed
                   ? Colors.grey
                   : isCompleted
-                      ? Colors.green
-                      : Colors.white24,
+                  ? Colors.green
+                  : Colors.white24,
               size: 20,
             ),
           ),
@@ -84,7 +80,7 @@ class QuestCard extends StatelessWidget {
                   style: const TextStyle(color: Colors.white38, fontSize: 11),
                 ),
                 const SizedBox(height: 4),
-                
+
                 // 프로그레스 바
                 Row(
                   children: [
@@ -125,7 +121,10 @@ class QuestCard extends StatelessWidget {
               onPressed: onClaim,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 minimumSize: Size.zero,
               ),
               child: Column(

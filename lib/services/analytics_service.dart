@@ -20,10 +20,10 @@ class AnalyticsService {
   Future<void> initialize() async {
     // 📊 Analytics 활성화
     await _analytics.setAnalyticsCollectionEnabled(true);
-    
+
     // 🔥 Crashlytics 활성화 (디버그 모드에서는 비활성화)
     await _crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
-    
+
     debugPrint('📊 AnalyticsService 초기화 완료 (Crashlytics: ${!kDebugMode})');
   }
 
@@ -35,11 +35,11 @@ class AnalyticsService {
   Future<void> setUser(String uid, {String? loginMethod}) async {
     await _analytics.setUserId(id: uid);
     await _crashlytics.setUserIdentifier(uid);
-    
+
     if (loginMethod != null) {
       await _analytics.logLogin(loginMethod: loginMethod);
     }
-    
+
     debugPrint('📊 유저 설정: $uid ($loginMethod)');
   }
 
@@ -74,7 +74,7 @@ class AnalyticsService {
 
   /// 뽑기
   Future<void> logGacha({
-    required String type,  // 'normal', 'advanced'
+    required String type, // 'normal', 'advanced'
     required String resultGrade,
     required String resultName,
   }) async {
@@ -113,10 +113,7 @@ class AnalyticsService {
   }) async {
     await _analytics.logEvent(
       name: 'boss_battle',
-      parameters: {
-        'is_win': isWin ? 1 : 0,
-        'boss_floor': bossFloor,
-      },
+      parameters: {'is_win': isWin ? 1 : 0, 'boss_floor': bossFloor},
     );
   }
 
@@ -127,36 +124,25 @@ class AnalyticsService {
   }) async {
     await _analytics.logEvent(
       name: 'sell_sword',
-      parameters: {
-        'grade': grade,
-        'gold_earned': goldEarned,
-      },
+      parameters: {'grade': grade, 'gold_earned': goldEarned},
     );
   }
 
   /// 광고 시청
   Future<void> logAdWatch({
-    required String adType,  // 'destroyRevive', 'bossSkip', 'sellBonus', etc.
+    required String adType, // 'destroyRevive', 'bossSkip', 'sellBonus', etc.
   }) async {
     await _analytics.logEvent(
       name: 'ad_watch',
-      parameters: {
-        'ad_type': adType,
-      },
+      parameters: {'ad_type': adType},
     );
   }
 
   /// 출석 체크
-  Future<void> logAttendance({
-    required int streak,
-    required int day,
-  }) async {
+  Future<void> logAttendance({required int streak, required int day}) async {
     await _analytics.logEvent(
       name: 'attendance_check',
-      parameters: {
-        'streak': streak,
-        'day': day,
-      },
+      parameters: {'streak': streak, 'day': day},
     );
   }
 
@@ -179,9 +165,9 @@ class AnalyticsService {
 
   /// 골드/다이아 소비
   Future<void> logSpendCurrency({
-    required String currency,  // 'gold', 'diamond'
+    required String currency, // 'gold', 'diamond'
     required int amount,
-    required String itemName,  // 뭘 샀는지
+    required String itemName, // 뭘 샀는지
   }) async {
     await _analytics.logSpendVirtualCurrency(
       itemName: itemName,
@@ -192,9 +178,9 @@ class AnalyticsService {
 
   /// 골드/다이아 획득
   Future<void> logEarnCurrency({
-    required String currency,  // 'gold', 'diamond'
+    required String currency, // 'gold', 'diamond'
     required int amount,
-    required String source,  // 'battle', 'sell', 'attendance', etc.
+    required String source, // 'battle', 'sell', 'attendance', etc.
   }) async {
     await _analytics.logEarnVirtualCurrency(
       virtualCurrencyName: currency,
@@ -221,7 +207,11 @@ class AnalyticsService {
   // =====================================================
 
   /// 치명적이지 않은 에러 기록 (앱은 안 죽지만 기록해둘 것)
-  Future<void> logError(dynamic error, StackTrace? stack, {String? reason}) async {
+  Future<void> logError(
+    dynamic error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
     await _crashlytics.recordError(error, stack, reason: reason ?? '');
     debugPrint('🔥 에러 기록: $reason - $error');
   }
